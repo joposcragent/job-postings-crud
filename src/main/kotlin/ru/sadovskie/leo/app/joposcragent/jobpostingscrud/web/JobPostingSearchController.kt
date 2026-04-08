@@ -22,9 +22,10 @@ class JobPostingSearchController(
 		@RequestParam(required = false) uuid: UUID?,
 		@RequestParam(required = false) uid: String?,
 		@RequestParam(required = false) title: String?,
+		@RequestParam(required = false) company: String?,
 		@RequestParam(defaultValue = "1") page: Int,
 		@RequestParam(defaultValue = "20") size: Int,
-	): JobPostingsList = jobPostingService.list(uuid, uid, title, page, size)
+	): JobPostingsList = jobPostingService.list(uuid, uid, title, company, page, size)
 
 	@PostMapping(
 		"/job-postings/search-query/by-uuids",

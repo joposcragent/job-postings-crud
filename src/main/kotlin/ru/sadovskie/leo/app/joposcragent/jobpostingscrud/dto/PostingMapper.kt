@@ -16,7 +16,8 @@ object PostingMapper {
 			publicationDate = record.publicationDate.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime(),
 			title = record.title,
 			url = record.url,
-			titleVector = record.titleVector?.toDoubleList(),
+			company = record.company,
+			content = record.content,
 			contentVector = record.contentVector?.toDoubleList(),
 			evaluationStatus = record.evaluationStatus,
 			responseStatus = record.responseStatus,
@@ -45,7 +46,8 @@ object PostingMapper {
 			publicationDate = publicationLocalDate(item.publicationDate)
 			title = item.title
 			url = item.url
-			titleVector = toFloatArray(item.titleVector)
+			company = item.company
+			content = item.content
 			contentVector = toFloatArray(item.contentVector)
 			evaluationStatus = item.evaluationStatus ?: EvaluationStatus.NEW
 			responseStatus = item.responseStatus

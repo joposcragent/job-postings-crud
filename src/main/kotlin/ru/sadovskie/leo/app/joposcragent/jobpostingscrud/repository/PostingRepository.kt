@@ -46,7 +46,8 @@ class PostingRepository(
 			.set(Tables.POSTINGS.PUBLICATION_DATE, r.publicationDate)
 			.set(Tables.POSTINGS.TITLE, r.title)
 			.set(Tables.POSTINGS.URL, r.url)
-			.set(Tables.POSTINGS.TITLE_VECTOR, r.titleVector)
+			.set(Tables.POSTINGS.COMPANY, r.company)
+			.set(Tables.POSTINGS.CONTENT, r.content)
 			.set(Tables.POSTINGS.CONTENT_VECTOR, r.contentVector)
 			.set(Tables.POSTINGS.EVALUATION_STATUS, r.evaluationStatus)
 			.set(Tables.POSTINGS.RESPONSE_STATUS, r.responseStatus)
@@ -60,7 +61,8 @@ class PostingRepository(
 			.set(Tables.POSTINGS.PUBLICATION_DATE, r.publicationDate)
 			.set(Tables.POSTINGS.TITLE, r.title)
 			.set(Tables.POSTINGS.URL, r.url)
-			.set(Tables.POSTINGS.TITLE_VECTOR, r.titleVector)
+			.set(Tables.POSTINGS.COMPANY, r.company)
+			.set(Tables.POSTINGS.CONTENT, r.content)
 			.set(Tables.POSTINGS.CONTENT_VECTOR, r.contentVector)
 			.set(Tables.POSTINGS.EVALUATION_STATUS, r.evaluationStatus)
 			.set(Tables.POSTINGS.RESPONSE_STATUS, r.responseStatus)
@@ -89,6 +91,7 @@ class PostingRepository(
 		uuid: UUID?,
 		uid: String?,
 		titleSubstring: String?,
+		company: String?,
 		page: Int,
 		size: Int,
 	): List<PostingsRecord> {
@@ -99,6 +102,13 @@ class PostingRepository(
 			condition = condition.and(
 				Tables.POSTINGS.TITLE.like(
 					JooqDsl.concat(JooqDsl.inline("%"), JooqDsl.`val`(titleSubstring), JooqDsl.inline("%")),
+				),
+			)
+		}
+		if (company != null) {
+			condition = condition.and(
+				Tables.POSTINGS.COMPANY.like(
+					JooqDsl.concat(JooqDsl.inline("%"), JooqDsl.`val`(company), JooqDsl.inline("%")),
 				),
 			)
 		}

@@ -51,10 +51,11 @@ class JobPostingService(
 		uuid: UUID?,
 		uid: String?,
 		title: String?,
+		company: String?,
 		page: Int,
 		size: Int,
 	): JobPostingsList {
-		val rows = repository.listFiltered(uuid, uid, title, page, size)
+		val rows = repository.listFiltered(uuid, uid, title, company, page, size)
 		if (rows.isEmpty()) {
 			throw ResponseStatusException(HttpStatus.NOT_FOUND, "Не найдено ни одной вакансии")
 		}

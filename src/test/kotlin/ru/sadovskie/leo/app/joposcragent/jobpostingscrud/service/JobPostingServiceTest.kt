@@ -50,7 +50,8 @@ class JobPostingServiceTest {
 		every { row.publicationDate } returns java.time.LocalDate.parse("2026-01-15")
 		every { row.title } returns "Developer"
 		every { row.url } returns "https://example.com/v/131927888"
-		every { row.titleVector } returns null
+		every { row.company } returns null
+		every { row.content } returns null
 		every { row.contentVector } returns null
 		every { row.evaluationStatus } returns EvaluationStatus.NEW
 		every { row.responseStatus } returns null
