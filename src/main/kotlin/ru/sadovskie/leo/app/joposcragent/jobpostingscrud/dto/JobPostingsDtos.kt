@@ -8,7 +8,7 @@ import java.util.UUID
 data class JobPostingsItem(
 	val uuid: UUID,
 	val uid: String,
-	val publicationDate: OffsetDateTime,
+	val publicationDate: String,
 	val title: String,
 	val url: String,
 	val company: String? = null,

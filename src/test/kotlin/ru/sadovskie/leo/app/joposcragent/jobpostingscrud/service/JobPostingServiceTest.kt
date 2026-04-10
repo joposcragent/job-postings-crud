@@ -24,7 +24,7 @@ class JobPostingServiceTest {
 	private val sampleItem = JobPostingsItem(
 		uuid = uuid,
 		uid = "131927888",
-		publicationDate = OffsetDateTime.parse("2026-01-15T00:00:00Z"),
+		publicationDate = "2026-01-15",
 		title = "Developer",
 		url = "https://example.com/v/131927888",
 	)
@@ -47,7 +47,7 @@ class JobPostingServiceTest {
 		val created = OffsetDateTime.parse("2026-01-01T12:00:00Z")
 		every { row.uuid } returns uuid
 		every { row.uid } returns "131927888"
-		every { row.publicationDate } returns java.time.LocalDate.parse("2026-01-15")
+		every { row.publicationDate } returns "2026-01-15"
 		every { row.title } returns "Developer"
 		every { row.url } returns "https://example.com/v/131927888"
 		every { row.company } returns null
@@ -106,10 +106,10 @@ class JobPostingServiceTest {
 	@Test
 	fun `list throws 404 when empty`() {
 		val repo = mockk<PostingRepository>()
-		every { repo.listFiltered(null, null, null, 1, 20) } returns emptyList()
+		every { repo.listFiltered(null, null, null, null, 1, 20) } returns emptyList()
 		val service = JobPostingService(repo)
 		assertThrows(ResponseStatusException::class.java) {
-			service.list(null, null, null, 1, 20)
+			service.list(null, null, null, null, 1, 20)
 		}
 	}
 

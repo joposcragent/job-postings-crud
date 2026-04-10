@@ -2,9 +2,6 @@ package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto
 
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.EvaluationStatus
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.tables.records.PostingsRecord
-import java.time.LocalDate
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import java.util.UUID
 
 object PostingMapper {
@@ -13,7 +10,7 @@ object PostingMapper {
 		JobPostingsItem(
 			uuid = record.uuid,
 			uid = record.uid,
-			publicationDate = record.publicationDate.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime(),
+			publicationDate = record.publicationDate,
 			title = record.title,
 			url = record.url,
 			company = record.company,
@@ -24,9 +21,6 @@ object PostingMapper {
 			createdAt = record.createdAt,
 			updatedAt = record.updatedAt,
 		)
-
-	fun publicationLocalDate(publicationDate: OffsetDateTime): LocalDate =
-		publicationDate.toInstant().atZone(ZoneOffset.UTC).toLocalDate()
 
 	fun toFloatArray(values: List<Double>?): Array<Float>? {
 		if (values == null) return null
@@ -43,7 +37,7 @@ object PostingMapper {
 		PostingsRecord().apply {
 			this.uuid = uuid
 			uid = item.uid
-			publicationDate = publicationLocalDate(item.publicationDate)
+			publicationDate = item.publicationDate
 			title = item.title
 			url = item.url
 			company = item.company
