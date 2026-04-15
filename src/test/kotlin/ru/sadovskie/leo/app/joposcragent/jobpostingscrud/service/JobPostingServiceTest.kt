@@ -14,12 +14,16 @@ import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsItem
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsUidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.UuidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.PostingRepository
+import tools.jackson.databind.ObjectMapper
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 
 class JobPostingServiceTest {
 
 	private val uuid: UUID = UUID.fromString("00000000-0000-0000-0000-000000000001")
+
+	private val objectMapper = ObjectMapper()
 
 	private val sampleItem = JobPostingsItem(
 		uuid = uuid,
@@ -47,12 +51,13 @@ class JobPostingServiceTest {
 		val created = OffsetDateTime.parse("2026-01-01T12:00:00Z")
 		every { row.uuid } returns uuid
 		every { row.uid } returns "131927888"
-		every { row.publicationDate } returns "2026-01-15"
+		every { row.publicationDate } returns LocalDate.parse("2026-01-15")
 		every { row.title } returns "Developer"
 		every { row.url } returns "https://example.com/v/131927888"
 		every { row.company } returns null
 		every { row.content } returns null
 		every { row.contentVector } returns null
+		every { row.relevance } returns null
 		every { row.evaluationStatus } returns EvaluationStatus.NEW
 		every { row.responseStatus } returns null
 		every { row.createdAt } returns created
@@ -143,14 +148,58 @@ class JobPostingServiceTest {
 	}
 
 	@Test
-	fun `update throws 404 when missing`() {
+	fun `patch throws 404 when missing`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.existsByUuid(uuid) } returns false
 		val service = JobPostingService(repo)
 		assertThrows(ResponseStatusException::class.java) {
-			service.update(uuid, sampleItem)
+			service.patch(uuid, objectMapper.readTree("""{"title":"x"}"""))
 		}
-		verify(exactly = 0) { repo.update(any(), any()) }
+		verify(exactly = 0) { repo.patch(any(), any()) }
+	}
+
+	@Test
+	fun `patch throws 400 when body empty`() {
+		val repo = mockk<PostingRepository>()
+		val service = JobPostingService(repo)
+		val ex = assertThrows(ResponseStatusException::class.java) {
+			service.patch(uuid, objectMapper.readTree("{}"))
+		}
+		assertEquals(HttpStatus.BAD_REQUEST, ex.statusCode)
+		verify(exactly = 0) { repo.existsByUuid(any()) }
+		verify(exactly = 0) { repo.patch(any(), any()) }
+	}
+
+	@Test
+	fun `patch throws 400 on unknown field`() {
+		val repo = mockk<PostingRepository>()
+		val service = JobPostingService(repo)
+		val ex = assertThrows(ResponseStatusException::class.java) {
+			service.patch(uuid, objectMapper.readTree("""{"title":"ok","extra":1}"""))
+		}
+		assertEquals(HttpStatus.BAD_REQUEST, ex.statusCode)
+		verify(exactly = 0) { repo.patch(any(), any()) }
+	}
+
+	@Test
+	fun `patch throws 400 when null on non nullable column`() {
+		val repo = mockk<PostingRepository>()
+		val service = JobPostingService(repo)
+		val ex = assertThrows(ResponseStatusException::class.java) {
+			service.patch(uuid, objectMapper.readTree("""{"title":null}"""))
+		}
+		assertEquals(HttpStatus.BAD_REQUEST, ex.statusCode)
+		verify(exactly = 0) { repo.patch(any(), any()) }
+	}
+
+	@Test
+	fun `patch calls repository when valid`() {
+		val repo = mockk<PostingRepository>()
+		every { repo.existsByUuid(uuid) } returns true
+		every { repo.patch(uuid, any()) } returns Unit
+		val service = JobPostingService(repo)
+		service.patch(uuid, objectMapper.readTree("""{"title":"New title"}"""))
+		verify(exactly = 1) { repo.patch(uuid, any()) }
 	}
 
 	@Test

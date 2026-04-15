@@ -14,6 +14,7 @@ data class JobPostingsItem(
 	val company: String? = null,
 	val content: String? = null,
 	val contentVector: List<Double>? = null,
+	val relevance: Double? = null,
 	val evaluationStatus: EvaluationStatus? = null,
 	val responseStatus: ResponseStatus? = null,
 	val createdAt: OffsetDateTime? = null,

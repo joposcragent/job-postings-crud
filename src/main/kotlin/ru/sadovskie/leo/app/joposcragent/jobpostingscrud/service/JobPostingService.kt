@@ -1,5 +1,6 @@
 package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.service
 
+import tools.jackson.databind.JsonNode
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -40,11 +41,12 @@ class JobPostingService(
 		repository.insert(jobPostingUuid, item)
 	}
 
-	fun update(jobPostingUuid: UUID, item: JobPostingsItem) {
+	fun patch(jobPostingUuid: UUID, body: JsonNode) {
+		val patch = JobPostingPatchParser.parse(body)
 		if (!repository.existsByUuid(jobPostingUuid)) {
 			throw ResponseStatusException(HttpStatus.NOT_FOUND)
 		}
-		repository.update(jobPostingUuid, item)
+		repository.patch(jobPostingUuid, patch)
 	}
 
 	fun list(

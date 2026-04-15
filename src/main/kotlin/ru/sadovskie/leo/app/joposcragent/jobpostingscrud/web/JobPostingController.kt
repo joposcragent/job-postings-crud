@@ -4,8 +4,9 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import tools.jackson.databind.JsonNode
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsItem
@@ -33,15 +34,15 @@ class JobPostingController(
 		return ResponseEntity.ok().build()
 	}
 
-	@PutMapping(
+	@PatchMapping(
 		"/job-postings/{jobPostingUuid}",
 		consumes = [MediaType.APPLICATION_JSON_VALUE],
 	)
-	fun update(
+	fun patch(
 		@PathVariable jobPostingUuid: UUID,
-		@RequestBody body: JobPostingsItem,
+		@RequestBody body: JsonNode,
 	): ResponseEntity<Unit> {
-		jobPostingService.update(jobPostingUuid, body)
+		jobPostingService.patch(jobPostingUuid, body)
 		return ResponseEntity.ok().build()
 	}
 }

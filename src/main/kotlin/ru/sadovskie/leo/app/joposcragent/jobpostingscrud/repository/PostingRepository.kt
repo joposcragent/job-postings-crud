@@ -4,14 +4,17 @@ import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.impl.DSL as JooqDsl
 import org.springframework.stereotype.Repository
+import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.PostingPatchField
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.EvaluationStatus
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.ResponseStatus
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.Tables
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.tables.records.PostingsRecord
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsItem
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.PostingMapper
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.EnumMap
 import java.util.UUID
 
 @Repository
@@ -49,26 +52,32 @@ class PostingRepository(
 			.set(Tables.POSTINGS.COMPANY, r.company)
 			.set(Tables.POSTINGS.CONTENT, r.content)
 			.set(Tables.POSTINGS.CONTENT_VECTOR, r.contentVector)
+			.set(Tables.POSTINGS.RELEVANCE, r.relevance)
 			.set(Tables.POSTINGS.EVALUATION_STATUS, r.evaluationStatus)
 			.set(Tables.POSTINGS.RESPONSE_STATUS, r.responseStatus)
 			.execute()
 	}
 
-	fun update(uuid: UUID, item: JobPostingsItem) {
-		val r = PostingMapper.newRecord(uuid, item)
-		dsl.update(Tables.POSTINGS)
-			.set(Tables.POSTINGS.UID, r.uid)
-			.set(Tables.POSTINGS.PUBLICATION_DATE, r.publicationDate)
-			.set(Tables.POSTINGS.TITLE, r.title)
-			.set(Tables.POSTINGS.URL, r.url)
-			.set(Tables.POSTINGS.COMPANY, r.company)
-			.set(Tables.POSTINGS.CONTENT, r.content)
-			.set(Tables.POSTINGS.CONTENT_VECTOR, r.contentVector)
-			.set(Tables.POSTINGS.EVALUATION_STATUS, r.evaluationStatus)
-			.set(Tables.POSTINGS.RESPONSE_STATUS, r.responseStatus)
-			.set(Tables.POSTINGS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
-			.where(Tables.POSTINGS.UUID.eq(uuid))
-			.execute()
+	fun patch(uuid: UUID, values: EnumMap<PostingPatchField, Any?>) {
+		check(values.isNotEmpty())
+		val q = dsl.updateQuery(Tables.POSTINGS)
+		values.forEach { (field, v) ->
+			when (field) {
+				PostingPatchField.UID -> q.addValue(Tables.POSTINGS.UID, v as String)
+				PostingPatchField.PUBLICATION_DATE -> q.addValue(Tables.POSTINGS.PUBLICATION_DATE, v as LocalDate)
+				PostingPatchField.TITLE -> q.addValue(Tables.POSTINGS.TITLE, v as String)
+				PostingPatchField.COMPANY -> q.addValue(Tables.POSTINGS.COMPANY, v as String?)
+				PostingPatchField.URL -> q.addValue(Tables.POSTINGS.URL, v as String)
+				PostingPatchField.CONTENT -> q.addValue(Tables.POSTINGS.CONTENT, v as String?)
+				PostingPatchField.CONTENT_VECTOR -> q.addValue(Tables.POSTINGS.CONTENT_VECTOR, v as Array<Float>?)
+				PostingPatchField.EVALUATION_STATUS -> q.addValue(Tables.POSTINGS.EVALUATION_STATUS, v as EvaluationStatus)
+				PostingPatchField.RESPONSE_STATUS -> q.addValue(Tables.POSTINGS.RESPONSE_STATUS, v as ResponseStatus?)
+				PostingPatchField.RELEVANCE -> q.addValue(Tables.POSTINGS.RELEVANCE, v as Float?)
+			}
+		}
+		q.addValue(Tables.POSTINGS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+		q.addConditions(Tables.POSTINGS.UUID.eq(uuid))
+		q.execute()
 	}
 
 	fun updateEvaluationStatus(uuid: UUID, status: EvaluationStatus) {
