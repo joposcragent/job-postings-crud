@@ -16,6 +16,7 @@ import org.springframework.test.web.client.match.MockRestRequestMatchers.method
 import org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo
 import org.springframework.test.web.client.response.MockRestResponseCreators.withStatus
 import org.springframework.web.client.RestClient
+import tools.jackson.databind.json.JsonMapper
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -31,7 +32,8 @@ class CeleryEventsProducerTest {
 		val builder = RestClient.builder().baseUrl("http://celery-stub")
 		server = MockRestServiceServer.bindTo(builder).build()
 		restClient = builder.build()
-		producer = CeleryEventsProducer(restClient)
+		val jsonMapper = JsonMapper.builder().findAndAddModules().build()
+		producer = CeleryEventsProducer(restClient, jsonMapper)
 	}
 
 	@AfterEach

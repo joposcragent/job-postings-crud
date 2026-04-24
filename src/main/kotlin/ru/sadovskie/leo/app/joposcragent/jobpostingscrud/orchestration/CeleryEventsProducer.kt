@@ -6,12 +6,14 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientResponseException
+import tools.jackson.databind.json.JsonMapper
 import java.time.OffsetDateTime
 import java.util.UUID
 
 @Component
 class CeleryEventsProducer(
 	@Qualifier("celeryOrchestrator") private val restClient: RestClient,
+	private val jsonMapper: JsonMapper,
 ) : OrchestratorEventsProducer {
 
 	private val log = LoggerFactory.getLogger(javaClass)
@@ -49,10 +51,11 @@ class CeleryEventsProducer(
 
 	private fun postJson(path: String, body: Map<String, Any?>) {
 		try {
+			val json = jsonMapper.writeValueAsString(body)
 			restClient.post()
 				.uri(path)
 				.contentType(MediaType.APPLICATION_JSON)
-				.body(body)
+				.body(json)
 				.retrieve()
 				.toBodilessEntity()
 		} catch (e: RestClientResponseException) {
