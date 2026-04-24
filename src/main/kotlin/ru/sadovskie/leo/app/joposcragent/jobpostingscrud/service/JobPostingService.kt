@@ -54,6 +54,12 @@ class JobPostingService(
 			val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 			orchestratorEventsProducer.publishEvaluationQueued(correlationId, jobPostingUuid, createdAt)
 		} catch (e: Exception) {
+			log.error(
+				"Сбой при создании вакансии jobPostingUuid={} с correlationId={}; попытка отправить progress в оркестратор",
+				jobPostingUuid,
+				correlationId,
+				e,
+			)
 			try {
 				orchestratorEventsProducer.publishSaveFailedProgress(
 					correlationId = correlationId,
@@ -63,7 +69,7 @@ class JobPostingService(
 					createdAt = OffsetDateTime.now(ZoneOffset.UTC),
 				)
 			} catch (secondary: Exception) {
-				log.warn("Не удалось отправить событие progress в оркестратор", secondary)
+				log.error("Не удалось отправить событие progress в оркестратор после основного сбоя", secondary)
 			}
 			throw e
 		}

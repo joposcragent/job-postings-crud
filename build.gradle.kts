@@ -18,7 +18,7 @@ plugins {
 }
 
 group = "ru.sadovskie.leo.app.joposcragent"
-version = "1.0.0"
+version = "1.0.1"
 
 jacoco {
 	toolVersion = "0.8.12"
@@ -108,9 +108,22 @@ sourceSets["main"].java.srcDir("build/generated-src/jooq/main")
 tasks.named("compileKotlin") {
 	dependsOn("generateJooq")
 }
+val dockerImageRepository = System.getenv("IMAGE_NAME") ?: "joposcragent/${rootProject.name}"
+val dockerImageTag = System.getenv("IMAGE_TAG") ?: project.version.toString()
 
 tasks.bootBuildImage {
-	imageName.set("${System.getenv("IMAGE_NAME") ?: "joposcragent/"+rootProject.name}:${System.getenv("IMAGE_TAG") ?: project.version.toString()}")
+	imageName.set("$dockerImageRepository:$dockerImageTag")
+	finalizedBy("bootBuildImageTagLatest")
+}
+
+tasks.register<Exec>("bootBuildImageTagLatest") {
+	group = "container"
+	description = "docker tag: помечает образ из bootBuildImage тегом latest"
+	commandLine(
+		"docker", "tag",
+		"$dockerImageRepository:$dockerImageTag",
+		"$dockerImageRepository:latest",
+	)
 }
 
 tasks.register("buildImage") {

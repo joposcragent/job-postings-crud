@@ -1,5 +1,6 @@
 package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.orchestration
 
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
@@ -12,6 +13,8 @@ import java.util.UUID
 class CeleryEventsProducer(
 	@Qualifier("celeryOrchestrator") private val restClient: RestClient,
 ) : OrchestratorEventsProducer {
+
+	private val log = LoggerFactory.getLogger(javaClass)
 
 	override fun publishEvaluationQueued(
 		correlationId: UUID,
@@ -53,10 +56,25 @@ class CeleryEventsProducer(
 				.retrieve()
 				.toBodilessEntity()
 		} catch (e: RestClientResponseException) {
+			log.error(
+				"Оркестратор вернул HTTP {} на POST {}: {}",
+				e.statusCode.value(),
+				path,
+				e.responseBodyAsString,
+				e,
+			)
 			throw IllegalStateException(
 				"Orchestrator returned ${e.statusCode.value()}: ${e.responseBodyAsString}",
 				e,
 			)
+		} catch (e: Exception) {
+			log.error(
+				"Вызов оркестратора не удался (POST {}). Проверьте celery.orchestrator.base-url и доступность сервиса. {}",
+				path,
+				e.message ?: e.toString(),
+				e,
+			)
+			throw e
 		}
 	}
 }
