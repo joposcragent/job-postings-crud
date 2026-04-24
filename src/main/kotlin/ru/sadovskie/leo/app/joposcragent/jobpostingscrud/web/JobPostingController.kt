@@ -8,7 +8,10 @@ import tools.jackson.databind.JsonNode
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.http.HttpStatus
+import org.springframework.web.server.ResponseStatusException
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsItem
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.service.JobPostingService
 import java.util.UUID
@@ -29,9 +32,25 @@ class JobPostingController(
 	fun create(
 		@PathVariable jobPostingUuid: UUID,
 		@RequestBody body: JobPostingsItem,
+		@RequestHeader(name = "X-Joposcragent-correlationId", required = false) correlationIdHeader: String?,
 	): ResponseEntity<Unit> {
-		jobPostingService.create(jobPostingUuid, body)
+		val correlationId = parseCorrelationId(correlationIdHeader)
+		jobPostingService.create(jobPostingUuid, body, correlationId)
 		return ResponseEntity.ok().build()
+	}
+
+	private fun parseCorrelationId(header: String?): UUID? {
+		if (header.isNullOrBlank()) {
+			return null
+		}
+		return try {
+			UUID.fromString(header.trim())
+		} catch (_: IllegalArgumentException) {
+			throw ResponseStatusException(
+				HttpStatus.BAD_REQUEST,
+				"Некорректный X-Joposcragent-correlationId: ожидается UUID",
+			)
+		}
 	}
 
 	@PatchMapping(

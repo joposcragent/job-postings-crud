@@ -1,5 +1,6 @@
 package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.exception
 
+import org.slf4j.LoggerFactory
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -12,6 +13,8 @@ import org.springframework.web.server.ResponseStatusException
 @RestControllerAdvice
 class ApiExceptionHandler {
 
+	private val log = LoggerFactory.getLogger(javaClass)
+
 	@ExceptionHandler(ResponseStatusException::class)
 	fun handleResponseStatus(e: ResponseStatusException): ResponseEntity<String> {
 		val body = e.reason ?: e.message ?: e.statusCode.toString()
@@ -22,6 +25,7 @@ class ApiExceptionHandler {
 
 	@ExceptionHandler(Exception::class)
 	fun handleUncaught(e: Exception): ResponseEntity<String> {
+		log.error("Необработанное исключение", e)
 		val msg = e.message ?: e.toString()
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 			.contentType(MediaType.TEXT_PLAIN)

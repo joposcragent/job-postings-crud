@@ -1,6 +1,7 @@
 package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.service
 
 import tools.jackson.databind.JsonNode
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -11,13 +12,19 @@ import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsUidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.PostingMapper
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.UuidsList
+import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.orchestration.OrchestratorEventsProducer
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.PostingRepository
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 
 @Service
 class JobPostingService(
 	private val repository: PostingRepository,
+	private val orchestratorEventsProducer: OrchestratorEventsProducer,
 ) {
+
+	private val log = LoggerFactory.getLogger(javaClass)
 
 	fun get(jobPostingUuid: UUID): JobPostingsItem {
 		val row = repository.findByUuid(jobPostingUuid)
@@ -25,7 +32,7 @@ class JobPostingService(
 		return PostingMapper.toDto(row)
 	}
 
-	fun create(jobPostingUuid: UUID, item: JobPostingsItem) {
+	fun create(jobPostingUuid: UUID, item: JobPostingsItem, correlationId: UUID? = null) {
 		if (repository.existsByUuid(jobPostingUuid)) {
 			throw ResponseStatusException(
 				HttpStatus.CONFLICT,
@@ -38,7 +45,28 @@ class JobPostingService(
 				"Вакансия с uid ${item.uid} уже есть в БД",
 			)
 		}
-		repository.insert(jobPostingUuid, item)
+		if (correlationId == null) {
+			repository.insert(jobPostingUuid, item)
+			return
+		}
+		try {
+			repository.insert(jobPostingUuid, item)
+			val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
+			orchestratorEventsProducer.publishEvaluationQueued(correlationId, jobPostingUuid, createdAt)
+		} catch (e: Exception) {
+			try {
+				orchestratorEventsProducer.publishSaveFailedProgress(
+					correlationId = correlationId,
+					jobPostingUuid = jobPostingUuid,
+					vacancyUrl = item.url,
+					executionLog = e.message ?: e.toString(),
+					createdAt = OffsetDateTime.now(ZoneOffset.UTC),
+				)
+			} catch (secondary: Exception) {
+				log.warn("Не удалось отправить событие progress в оркестратор", secondary)
+			}
+			throw e
+		}
 	}
 
 	fun patch(jobPostingUuid: UUID, body: JsonNode) {

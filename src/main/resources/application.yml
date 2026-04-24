@@ -17,3 +17,7 @@ spring:
     username: postgres
     password: postgres
 
+celery:
+  orchestrator:
+    base-url: http://localhost:8000
+

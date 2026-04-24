@@ -1,4 +1,6 @@
 import nu.studer.gradle.jooq.JooqEdition
+import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
+import org.gradle.testing.jacoco.tasks.JacocoReport
 import org.jooq.meta.jaxb.Configuration
 import org.jooq.meta.jaxb.Database
 import org.jooq.meta.jaxb.Generate
@@ -12,10 +14,15 @@ plugins {
 	id("org.springframework.boot") version "4.0.5"
 	id("io.spring.dependency-management") version "1.1.7"
 	id("nu.studer.jooq") version "9.0"
+	jacoco
 }
 
 group = "ru.sadovskie.leo.app.joposcragent"
-version = "0.0.6-SNAPSHOT"
+version = "1.0.0"
+
+jacoco {
+	toolVersion = "0.8.12"
+}
 
 java {
 	toolchain {
@@ -113,4 +120,37 @@ tasks.register("buildImage") {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+val jacocoInstrumentedClasses = files(
+	sourceSets["main"].output.classesDirs.files.map { dir ->
+		fileTree(dir) { exclude("**/jobpostings/jooq/**") }
+	},
+)
+
+tasks.named<JacocoReport>("jacocoTestReport") {
+	dependsOn(tasks.test)
+	classDirectories.setFrom(jacocoInstrumentedClasses)
+	reports {
+		xml.required.set(true)
+		html.required.set(true)
+	}
+}
+
+tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+	dependsOn(tasks.test)
+	classDirectories.setFrom(jacocoInstrumentedClasses)
+	violationRules {
+		rule {
+			limit {
+				counter = "LINE"
+				value = "COVEREDRATIO"
+				minimum = "0.60".toBigDecimal()
+			}
+		}
+	}
+}
+
+tasks.check {
+	dependsOn(tasks.named("jacocoTestCoverageVerification"))
 }

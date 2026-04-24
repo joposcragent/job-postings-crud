@@ -2,6 +2,7 @@ package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.service
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -13,6 +14,7 @@ import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.tables.records.Posting
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsItem
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsUidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.UuidsList
+import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.orchestration.OrchestratorEventsProducer
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.PostingRepository
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
@@ -33,11 +35,16 @@ class JobPostingServiceTest {
 		url = "https://example.com/v/131927888",
 	)
 
+	private fun jobPostingService(
+		repo: PostingRepository,
+		orchestrator: OrchestratorEventsProducer = mockk(relaxed = true),
+	) = JobPostingService(repo, orchestrator)
+
 	@Test
 	fun `get throws 404 when not found`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.findByUuid(uuid) } returns null
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		val ex = assertThrows(ResponseStatusException::class.java) {
 			service.get(uuid)
 		}
@@ -63,7 +70,7 @@ class JobPostingServiceTest {
 		every { row.createdAt } returns created
 		every { row.updatedAt } returns null
 		every { repo.findByUuid(uuid) } returns row
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		val dto = service.get(uuid)
 		assertEquals(uuid, dto.uuid)
 		assertEquals("131927888", dto.uid)
@@ -74,7 +81,7 @@ class JobPostingServiceTest {
 	fun `create throws 409 when uuid exists`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.existsByUuid(uuid) } returns true
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		val ex = assertThrows(ResponseStatusException::class.java) {
 			service.create(uuid, sampleItem)
 		}
@@ -88,7 +95,7 @@ class JobPostingServiceTest {
 		val repo = mockk<PostingRepository>()
 		every { repo.existsByUuid(uuid) } returns false
 		every { repo.existsByUid("131927888") } returns true
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		val ex = assertThrows(ResponseStatusException::class.java) {
 			service.create(uuid, sampleItem)
 		}
@@ -103,16 +110,88 @@ class JobPostingServiceTest {
 		every { repo.existsByUuid(uuid) } returns false
 		every { repo.existsByUid("131927888") } returns false
 		every { repo.insert(uuid, sampleItem) } returns Unit
-		val service = JobPostingService(repo)
+		val orch = mockk<OrchestratorEventsProducer>(relaxed = true)
+		val service = jobPostingService(repo, orch)
 		service.create(uuid, sampleItem)
 		verify(exactly = 1) { repo.insert(uuid, sampleItem) }
+		verify(exactly = 0) { orch.publishEvaluationQueued(any(), any(), any()) }
+		verify(exactly = 0) { orch.publishSaveFailedProgress(any(), any(), any(), any(), any()) }
+	}
+
+	@Test
+	fun `create publishes evaluation when correlation id present`() {
+		val repo = mockk<PostingRepository>()
+		val orch = mockk<OrchestratorEventsProducer>(relaxed = true)
+		every { repo.existsByUuid(uuid) } returns false
+		every { repo.existsByUid("131927888") } returns false
+		every { repo.insert(uuid, sampleItem) } returns Unit
+		val cid = UUID.randomUUID()
+		val service = jobPostingService(repo, orch)
+		service.create(uuid, sampleItem, cid)
+		verify(exactly = 1) { orch.publishEvaluationQueued(cid, uuid, any()) }
+		verify(exactly = 0) { orch.publishSaveFailedProgress(any(), any(), any(), any(), any()) }
+	}
+
+	@Test
+	fun `create publishes save failed when insert throws and correlation id present`() {
+		val repo = mockk<PostingRepository>()
+		val orch = mockk<OrchestratorEventsProducer>(relaxed = true)
+		every { repo.existsByUuid(uuid) } returns false
+		every { repo.existsByUid("131927888") } returns false
+		every { repo.insert(uuid, sampleItem) } throws RuntimeException("db fail")
+		val cid = UUID.randomUUID()
+		val service = jobPostingService(repo, orch)
+		assertThrows(RuntimeException::class.java) {
+			service.create(uuid, sampleItem, cid)
+		}
+		val logSlot = slot<String>()
+		verify(exactly = 1) {
+			orch.publishSaveFailedProgress(cid, uuid, sampleItem.url, capture(logSlot), any())
+		}
+		assertEquals("db fail", logSlot.captured)
+		verify(exactly = 0) { orch.publishEvaluationQueued(any(), any(), any()) }
+	}
+
+	@Test
+	fun `create publishes save failed when evaluation throws after insert`() {
+		val repo = mockk<PostingRepository>()
+		val orch = mockk<OrchestratorEventsProducer>(relaxed = true)
+		every { repo.existsByUuid(uuid) } returns false
+		every { repo.existsByUid("131927888") } returns false
+		every { repo.insert(uuid, sampleItem) } returns Unit
+		every { orch.publishEvaluationQueued(any(), any(), any()) } throws IllegalStateException("orchestrator down")
+		val cid = UUID.randomUUID()
+		val service = jobPostingService(repo, orch)
+		val ex = assertThrows(IllegalStateException::class.java) {
+			service.create(uuid, sampleItem, cid)
+		}
+		assertEquals("orchestrator down", ex.message)
+		val logSlot2 = slot<String>()
+		verify(exactly = 1) {
+			orch.publishSaveFailedProgress(cid, uuid, sampleItem.url, capture(logSlot2), any())
+		}
+		assertEquals("orchestrator down", logSlot2.captured)
+	}
+
+	@Test
+	fun `create on uuid conflict does not call orchestrator with correlation id`() {
+		val repo = mockk<PostingRepository>()
+		val orch = mockk<OrchestratorEventsProducer>(relaxed = true)
+		every { repo.existsByUuid(uuid) } returns true
+		val cid = UUID.randomUUID()
+		val service = jobPostingService(repo, orch)
+		assertThrows(ResponseStatusException::class.java) {
+			service.create(uuid, sampleItem, cid)
+		}
+		verify(exactly = 0) { orch.publishEvaluationQueued(any(), any(), any()) }
+		verify(exactly = 0) { orch.publishSaveFailedProgress(any(), any(), any(), any(), any()) }
 	}
 
 	@Test
 	fun `list throws 404 when empty`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.listFiltered(null, null, null, null, 1, 20) } returns emptyList()
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		assertThrows(ResponseStatusException::class.java) {
 			service.list(null, null, null, null, 1, 20)
 		}
@@ -122,7 +201,7 @@ class JobPostingServiceTest {
 	fun `findByUuids throws 404 when empty`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.findByUuids(listOf(uuid)) } returns emptyList()
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		assertThrows(ResponseStatusException::class.java) {
 			service.findByUuids(UuidsList(listOf(uuid)))
 		}
@@ -132,7 +211,7 @@ class JobPostingServiceTest {
 	fun `nonExistentUids throws 404 when all exist`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.findExistingUids(listOf("a", "b")) } returns setOf("a", "b")
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		assertThrows(ResponseStatusException::class.java) {
 			service.nonExistentUids(JobPostingsUidsList(listOf("a", "b")))
 		}
@@ -142,7 +221,7 @@ class JobPostingServiceTest {
 	fun `nonExistentUids returns only missing uids`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.findExistingUids(listOf("a", "b", "c")) } returns setOf("a")
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		val result = service.nonExistentUids(JobPostingsUidsList(listOf("a", "b", "c")))
 		assertEquals(listOf("b", "c"), result.list)
 	}
@@ -151,7 +230,7 @@ class JobPostingServiceTest {
 	fun `patch throws 404 when missing`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.existsByUuid(uuid) } returns false
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		assertThrows(ResponseStatusException::class.java) {
 			service.patch(uuid, objectMapper.readTree("""{"title":"x"}"""))
 		}
@@ -161,7 +240,7 @@ class JobPostingServiceTest {
 	@Test
 	fun `patch throws 400 when body empty`() {
 		val repo = mockk<PostingRepository>()
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		val ex = assertThrows(ResponseStatusException::class.java) {
 			service.patch(uuid, objectMapper.readTree("{}"))
 		}
@@ -173,7 +252,7 @@ class JobPostingServiceTest {
 	@Test
 	fun `patch throws 400 on unknown field`() {
 		val repo = mockk<PostingRepository>()
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		val ex = assertThrows(ResponseStatusException::class.java) {
 			service.patch(uuid, objectMapper.readTree("""{"title":"ok","extra":1}"""))
 		}
@@ -184,7 +263,7 @@ class JobPostingServiceTest {
 	@Test
 	fun `patch throws 400 when null on non nullable column`() {
 		val repo = mockk<PostingRepository>()
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		val ex = assertThrows(ResponseStatusException::class.java) {
 			service.patch(uuid, objectMapper.readTree("""{"title":null}"""))
 		}
@@ -197,7 +276,7 @@ class JobPostingServiceTest {
 		val repo = mockk<PostingRepository>()
 		every { repo.existsByUuid(uuid) } returns true
 		every { repo.patch(uuid, any()) } returns Unit
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		service.patch(uuid, objectMapper.readTree("""{"title":"New title"}"""))
 		verify(exactly = 1) { repo.patch(uuid, any()) }
 	}
@@ -206,7 +285,7 @@ class JobPostingServiceTest {
 	fun `updateEvaluationStatus throws 404 when missing`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.existsByUuid(uuid) } returns false
-		val service = JobPostingService(repo)
+		val service = jobPostingService(repo)
 		assertThrows(ResponseStatusException::class.java) {
 			service.updateEvaluationStatus(uuid, EvaluationStatus.RELEVANT)
 		}
