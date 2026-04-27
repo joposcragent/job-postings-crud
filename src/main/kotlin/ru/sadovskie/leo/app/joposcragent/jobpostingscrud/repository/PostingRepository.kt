@@ -101,6 +101,7 @@ class PostingRepository(
 		uid: String?,
 		titleSubstring: String?,
 		company: String?,
+		evaluationStatuses: List<EvaluationStatus>?,
 		page: Int,
 		size: Int,
 	): List<PostingsRecord> {
@@ -120,6 +121,9 @@ class PostingRepository(
 					JooqDsl.concat(JooqDsl.inline("%"), JooqDsl.`val`(company), JooqDsl.inline("%")),
 				),
 			)
+		}
+		if (!evaluationStatuses.isNullOrEmpty()) {
+			condition = condition.and(Tables.POSTINGS.EVALUATION_STATUS.`in`(evaluationStatuses))
 		}
 		val safePage = page.coerceAtLeast(1)
 		val safeSize = size.coerceAtLeast(1)

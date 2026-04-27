@@ -190,10 +190,10 @@ class JobPostingServiceTest {
 	@Test
 	fun `list throws 404 when empty`() {
 		val repo = mockk<PostingRepository>()
-		every { repo.listFiltered(null, null, null, null, 1, 20) } returns emptyList()
+		every { repo.listFiltered(null, null, null, null, null, 1, 20) } returns emptyList()
 		val service = jobPostingService(repo)
 		assertThrows(ResponseStatusException::class.java) {
-			service.list(null, null, null, null, 1, 20)
+			service.list(null, null, null, null, null, 1, 20)
 		}
 	}
 

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.EvaluationStatus
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsUidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.UuidsList
@@ -23,9 +24,18 @@ class JobPostingSearchController(
 		@RequestParam(required = false) uid: String?,
 		@RequestParam(required = false) title: String?,
 		@RequestParam(required = false) company: String?,
+		@RequestParam(name = "evaluationStatus", required = false) evaluationStatuses: List<EvaluationStatus>?,
 		@RequestParam(defaultValue = "1") page: Int,
 		@RequestParam(defaultValue = "20") size: Int,
-	): JobPostingsList = jobPostingService.list(uuid, uid, title, company, page, size)
+	): JobPostingsList = jobPostingService.list(
+		uuid = uuid,
+		uid = uid,
+		title = title,
+		company = company,
+		evaluationStatuses = evaluationStatuses,
+		page = page,
+		size = size,
+	)
 
 	@PostMapping(
 		"/job-postings/search-query/by-uuids",
