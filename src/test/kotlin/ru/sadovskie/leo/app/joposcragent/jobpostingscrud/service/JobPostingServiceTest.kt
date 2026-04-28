@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.EvaluationStatus
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.tables.records.PostingsRecord
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsItem
+import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsUidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.UuidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.orchestration.OrchestratorEventsProducer
@@ -188,13 +189,14 @@ class JobPostingServiceTest {
 	}
 
 	@Test
-	fun `list throws 404 when empty`() {
+	fun `list returns empty JobPostingsList when no rows`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.listFiltered(null, null, null, null, null, 1, 20) } returns emptyList()
 		val service = jobPostingService(repo)
-		assertThrows(ResponseStatusException::class.java) {
-			service.list(null, null, null, null, null, 1, 20)
-		}
+		assertEquals(
+			JobPostingsList(emptyList()),
+			service.list(null, null, null, null, null, 1, 20),
+		)
 	}
 
 	@Test

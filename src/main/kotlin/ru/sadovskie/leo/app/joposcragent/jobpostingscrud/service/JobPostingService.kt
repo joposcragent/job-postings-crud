@@ -94,9 +94,6 @@ class JobPostingService(
 	): JobPostingsList {
 		val statusFilter = evaluationStatuses?.takeIf { it.isNotEmpty() }
 		val rows = repository.listFiltered(uuid, uid, title, company, statusFilter, page, size)
-		if (rows.isEmpty()) {
-			throw ResponseStatusException(HttpStatus.NOT_FOUND, "Не найдено ни одной вакансии")
-		}
 		return JobPostingsList(rows.map { PostingMapper.toDto(it) })
 	}
 
