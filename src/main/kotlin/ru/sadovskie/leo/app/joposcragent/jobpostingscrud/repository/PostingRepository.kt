@@ -105,6 +105,36 @@ class PostingRepository(
 		page: Int,
 		size: Int,
 	): List<PostingsRecord> {
+		val condition = buildListFilterCondition(uuid, uid, titleSubstring, company, evaluationStatuses)
+		val (safePage, safeSize) = normalizePageSize(page, size)
+		return dsl.selectFrom(Tables.POSTINGS)
+			.where(condition)
+			.orderBy(Tables.POSTINGS.UUID)
+			.limit(safeSize)
+			.offset((safePage - 1) * safeSize)
+			.fetch()
+	}
+
+	fun countFiltered(
+		uuid: UUID?,
+		uid: String?,
+		titleSubstring: String?,
+		company: String?,
+		evaluationStatuses: List<EvaluationStatus>?,
+	): Long {
+		val condition = buildListFilterCondition(uuid, uid, titleSubstring, company, evaluationStatuses)
+		return dsl.fetchCount(
+			dsl.selectFrom(Tables.POSTINGS).where(condition),
+		).toLong()
+	}
+
+	private fun buildListFilterCondition(
+		uuid: UUID?,
+		uid: String?,
+		titleSubstring: String?,
+		company: String?,
+		evaluationStatuses: List<EvaluationStatus>?,
+	): Condition {
 		var condition: Condition = JooqDsl.trueCondition()
 		if (uuid != null) condition = condition.and(Tables.POSTINGS.UUID.eq(uuid))
 		if (uid != null) condition = condition.and(Tables.POSTINGS.UID.eq(uid))
@@ -125,14 +155,7 @@ class PostingRepository(
 		if (!evaluationStatuses.isNullOrEmpty()) {
 			condition = condition.and(Tables.POSTINGS.EVALUATION_STATUS.`in`(evaluationStatuses))
 		}
-		val safePage = page.coerceAtLeast(1)
-		val safeSize = size.coerceAtLeast(1)
-		return dsl.selectFrom(Tables.POSTINGS)
-			.where(condition)
-			.orderBy(Tables.POSTINGS.UUID)
-			.limit(safeSize)
-			.offset((safePage - 1) * safeSize)
-			.fetch()
+		return condition
 	}
 
 	fun findByUuids(uuids: Collection<UUID>): List<PostingsRecord> {
@@ -148,5 +171,10 @@ class PostingRepository(
 			.from(Tables.POSTINGS)
 			.where(Tables.POSTINGS.UID.`in`(uids))
 			.fetchSet(Tables.POSTINGS.UID)
+	}
+
+	companion object {
+		fun normalizePageSize(page: Int, size: Int): Pair<Int, Int> =
+			page.coerceAtLeast(1) to size.coerceAtLeast(1)
 	}
 }

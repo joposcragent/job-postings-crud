@@ -191,10 +191,23 @@ class JobPostingServiceTest {
 	@Test
 	fun `list returns empty JobPostingsList when no rows`() {
 		val repo = mockk<PostingRepository>()
+		every { repo.countFiltered(null, null, null, null, null) } returns 0L
 		every { repo.listFiltered(null, null, null, null, null, 1, 20) } returns emptyList()
 		val service = jobPostingService(repo)
 		assertEquals(
-			JobPostingsList(emptyList()),
+			JobPostingsList(emptyList(), totalPages = 0),
+			service.list(null, null, null, null, null, 1, 20),
+		)
+	}
+
+	@Test
+	fun `list sets totalPages from filtered count and page size`() {
+		val repo = mockk<PostingRepository>()
+		every { repo.countFiltered(null, null, null, null, null) } returns 21L
+		every { repo.listFiltered(null, null, null, null, null, 1, 20) } returns emptyList()
+		val service = jobPostingService(repo)
+		assertEquals(
+			JobPostingsList(emptyList(), totalPages = 2),
 			service.list(null, null, null, null, null, 1, 20),
 		)
 	}

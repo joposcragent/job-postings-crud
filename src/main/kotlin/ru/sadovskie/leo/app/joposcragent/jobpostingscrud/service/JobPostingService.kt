@@ -93,8 +93,15 @@ class JobPostingService(
 		size: Int,
 	): JobPostingsList {
 		val statusFilter = evaluationStatuses?.takeIf { it.isNotEmpty() }
+		val (_, safeSize) = PostingRepository.normalizePageSize(page, size)
+		val totalCount = repository.countFiltered(uuid, uid, title, company, statusFilter)
+		val totalPages = if (totalCount == 0L) {
+			0
+		} else {
+			((totalCount + safeSize - 1L) / safeSize).toInt()
+		}
 		val rows = repository.listFiltered(uuid, uid, title, company, statusFilter, page, size)
-		return JobPostingsList(rows.map { PostingMapper.toDto(it) })
+		return JobPostingsList(rows.map { PostingMapper.toDto(it) }, totalPages)
 	}
 
 	fun findByUuids(body: UuidsList): JobPostingsList {

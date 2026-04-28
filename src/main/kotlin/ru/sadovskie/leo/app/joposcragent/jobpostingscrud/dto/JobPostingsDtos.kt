@@ -1,5 +1,6 @@
 package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.EvaluationStatus
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.ResponseStatus
 import java.time.OffsetDateTime
@@ -23,6 +24,8 @@ data class JobPostingsItem(
 
 data class JobPostingsList(
 	val list: List<JobPostingsItem>,
+	@get:JsonInclude(JsonInclude.Include.NON_NULL)
+	val totalPages: Int? = null,
 )
 
 data class UuidsList(
