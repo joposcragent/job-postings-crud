@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.EvaluationStatus
+import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.ResponseStatus
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsUidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.UuidsList
@@ -25,6 +26,9 @@ class JobPostingSearchController(
 		@RequestParam(required = false) title: String?,
 		@RequestParam(required = false) company: String?,
 		@RequestParam(name = "evaluationStatus", required = false) evaluationStatuses: List<EvaluationStatus>?,
+		@RequestParam(name = "responseStatus", required = false) responseStatuses: List<ResponseStatus>?,
+		@RequestParam(name = "includeUnsetResponseStatus", required = false, defaultValue = "false")
+		includeUnsetResponseStatus: Boolean,
 		@RequestParam(defaultValue = "1") page: Int,
 		@RequestParam(defaultValue = "20") size: Int,
 	): JobPostingsList = jobPostingService.list(
@@ -33,6 +37,8 @@ class JobPostingSearchController(
 		title = title,
 		company = company,
 		evaluationStatuses = evaluationStatuses,
+		responseStatuses = responseStatuses,
+		includeUnsetResponseStatus = includeUnsetResponseStatus,
 		page = page,
 		size = size,
 	)

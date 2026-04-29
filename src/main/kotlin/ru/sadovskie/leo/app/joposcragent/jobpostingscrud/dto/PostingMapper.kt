@@ -11,7 +11,7 @@ object PostingMapper {
 		JobPostingsItem(
 			uuid = record.uuid,
 			uid = record.uid,
-			publicationDate = record.publicationDate.toString(),
+			publicationDate = record.publicationDate?.toString() ?: "",
 			title = record.title,
 			url = record.url,
 			company = record.company,
@@ -39,7 +39,7 @@ object PostingMapper {
 		PostingsRecord().apply {
 			this.uuid = uuid
 			uid = item.uid
-			publicationDate = parsePublicationDate(item.publicationDate)
+			publicationDate = LocalDate.parse(item.publicationDate)
 			title = item.title
 			url = item.url
 			company = item.company
@@ -50,7 +50,4 @@ object PostingMapper {
 			responseStatus = item.responseStatus
 		}
 
-	fun parsePublicationDate(value: String): LocalDate =
-		LocalDate.parse(value)
 }
-

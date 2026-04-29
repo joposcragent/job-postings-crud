@@ -59,7 +59,7 @@ class JobPostingServiceTest {
 		val created = OffsetDateTime.parse("2026-01-01T12:00:00Z")
 		every { row.uuid } returns uuid
 		every { row.uid } returns "131927888"
-		every { row.publicationDate } returns LocalDate.parse("2026-01-15")
+		every { row.publicationDate } returns LocalDate.of(2026, 1, 15)
 		every { row.title } returns "Developer"
 		every { row.url } returns "https://example.com/v/131927888"
 		every { row.company } returns null
@@ -191,24 +191,24 @@ class JobPostingServiceTest {
 	@Test
 	fun `list returns empty JobPostingsList when no rows`() {
 		val repo = mockk<PostingRepository>()
-		every { repo.countFiltered(null, null, null, null, null) } returns 0L
-		every { repo.listFiltered(null, null, null, null, null, 1, 20) } returns emptyList()
+		every { repo.countFiltered(null, null, null, null, null, null, false) } returns 0L
+		every { repo.listFiltered(null, null, null, null, null, null, false, 1, 20) } returns emptyList()
 		val service = jobPostingService(repo)
 		assertEquals(
 			JobPostingsList(emptyList(), totalPages = 0),
-			service.list(null, null, null, null, null, 1, 20),
+			service.list(null, null, null, null, null, null, false, 1, 20),
 		)
 	}
 
 	@Test
 	fun `list sets totalPages from filtered count and page size`() {
 		val repo = mockk<PostingRepository>()
-		every { repo.countFiltered(null, null, null, null, null) } returns 21L
-		every { repo.listFiltered(null, null, null, null, null, 1, 20) } returns emptyList()
+		every { repo.countFiltered(null, null, null, null, null, null, false) } returns 21L
+		every { repo.listFiltered(null, null, null, null, null, null, false, 1, 20) } returns emptyList()
 		val service = jobPostingService(repo)
 		assertEquals(
 			JobPostingsList(emptyList(), totalPages = 2),
-			service.list(null, null, null, null, null, 1, 20),
+			service.list(null, null, null, null, null, null, false, 1, 20),
 		)
 	}
 

@@ -102,10 +102,20 @@ class PostingRepository(
 		titleSubstring: String?,
 		company: String?,
 		evaluationStatuses: List<EvaluationStatus>?,
+		responseStatuses: List<ResponseStatus>?,
+		includeUnsetResponseStatus: Boolean,
 		page: Int,
 		size: Int,
 	): List<PostingsRecord> {
-		val condition = buildListFilterCondition(uuid, uid, titleSubstring, company, evaluationStatuses)
+		val condition = buildListFilterCondition(
+			uuid,
+			uid,
+			titleSubstring,
+			company,
+			evaluationStatuses,
+			responseStatuses,
+			includeUnsetResponseStatus,
+		)
 		val (safePage, safeSize) = normalizePageSize(page, size)
 		return dsl.selectFrom(Tables.POSTINGS)
 			.where(condition)
@@ -121,8 +131,18 @@ class PostingRepository(
 		titleSubstring: String?,
 		company: String?,
 		evaluationStatuses: List<EvaluationStatus>?,
+		responseStatuses: List<ResponseStatus>?,
+		includeUnsetResponseStatus: Boolean,
 	): Long {
-		val condition = buildListFilterCondition(uuid, uid, titleSubstring, company, evaluationStatuses)
+		val condition = buildListFilterCondition(
+			uuid,
+			uid,
+			titleSubstring,
+			company,
+			evaluationStatuses,
+			responseStatuses,
+			includeUnsetResponseStatus,
+		)
 		return dsl.fetchCount(
 			dsl.selectFrom(Tables.POSTINGS).where(condition),
 		).toLong()
@@ -134,6 +154,8 @@ class PostingRepository(
 		titleSubstring: String?,
 		company: String?,
 		evaluationStatuses: List<EvaluationStatus>?,
+		responseStatuses: List<ResponseStatus>?,
+		includeUnsetResponseStatus: Boolean,
 	): Condition {
 		var condition: Condition = JooqDsl.trueCondition()
 		if (uuid != null) condition = condition.and(Tables.POSTINGS.UUID.eq(uuid))
@@ -154,6 +176,21 @@ class PostingRepository(
 		}
 		if (!evaluationStatuses.isNullOrEmpty()) {
 			condition = condition.and(Tables.POSTINGS.EVALUATION_STATUS.`in`(evaluationStatuses))
+		}
+		val responseIn = responseStatuses?.takeIf { it.isNotEmpty() }
+		when {
+			responseIn != null && includeUnsetResponseStatus -> {
+				condition = condition.and(
+					Tables.POSTINGS.RESPONSE_STATUS.`in`(responseIn)
+						.or(Tables.POSTINGS.RESPONSE_STATUS.isNull),
+				)
+			}
+			responseIn != null -> {
+				condition = condition.and(Tables.POSTINGS.RESPONSE_STATUS.`in`(responseIn))
+			}
+			includeUnsetResponseStatus -> {
+				condition = condition.and(Tables.POSTINGS.RESPONSE_STATUS.isNull)
+			}
 		}
 		return condition
 	}

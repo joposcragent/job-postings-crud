@@ -3,6 +3,7 @@ import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
 import org.gradle.testing.jacoco.tasks.JacocoReport
 import org.jooq.meta.jaxb.Configuration
 import org.jooq.meta.jaxb.Database
+import org.jooq.meta.jaxb.ForcedType
 import org.jooq.meta.jaxb.Generate
 import org.jooq.meta.jaxb.Generator
 import org.jooq.meta.jaxb.Jdbc
@@ -18,7 +19,7 @@ plugins {
 }
 
 group = "ru.sadovskie.leo.app.joposcragent"
-version = "1.2.1"
+version = "1.3.0"
 
 jacoco {
 	toolVersion = "0.8.12"
@@ -85,6 +86,12 @@ jooq {
 						name = "org.jooq.meta.postgres.PostgresDatabase"
 						inputSchema = "job_postings"
 						excludes = "flyway_schema_history"
+						forcedTypes = listOf(
+							ForcedType().apply {
+								name = "LOCALDATE"
+								includeExpression = ".*\\.postings\\.publication_date"
+							},
+						)
 					}
 					generate = Generate().apply {
 						isDeprecated = false
