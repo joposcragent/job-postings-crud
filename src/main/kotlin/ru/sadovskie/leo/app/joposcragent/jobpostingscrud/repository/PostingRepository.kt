@@ -69,7 +69,8 @@ class PostingRepository(
 				PostingPatchField.COMPANY -> q.addValue(Tables.POSTINGS.COMPANY, v as String?)
 				PostingPatchField.URL -> q.addValue(Tables.POSTINGS.URL, v as String)
 				PostingPatchField.CONTENT -> q.addValue(Tables.POSTINGS.CONTENT, v as String?)
-				PostingPatchField.CONTENT_VECTOR -> q.addValue(Tables.POSTINGS.CONTENT_VECTOR, v as Array<Float>?)
+				PostingPatchField.CONTENT_VECTOR ->
+					q.addValue(Tables.POSTINGS.CONTENT_VECTOR, contentVectorFromPatchValue(v))
 				PostingPatchField.EVALUATION_STATUS -> q.addValue(Tables.POSTINGS.EVALUATION_STATUS, v as EvaluationStatus)
 				PostingPatchField.RESPONSE_STATUS -> q.addValue(Tables.POSTINGS.RESPONSE_STATUS, v as ResponseStatus?)
 				PostingPatchField.RELEVANCE -> q.addValue(Tables.POSTINGS.RELEVANCE, v as Float?)
@@ -78,6 +79,12 @@ class PostingRepository(
 		q.addValue(Tables.POSTINGS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
 		q.addConditions(Tables.POSTINGS.UUID.eq(uuid))
 		q.execute()
+	}
+
+	private fun contentVectorFromPatchValue(value: Any?): Array<Float>? {
+		if (value == null) return null
+		check(value is Array<*>) { "contentVector must be an array or null" }
+		return Array(value.size) { i -> value[i] as Float }
 	}
 
 	fun updateEvaluationStatus(uuid: UUID, status: EvaluationStatus) {
