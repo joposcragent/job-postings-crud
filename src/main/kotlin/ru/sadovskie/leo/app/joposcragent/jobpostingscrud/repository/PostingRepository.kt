@@ -114,6 +114,7 @@ class PostingRepository(
 		responseIncludeNull: Boolean,
 		page: Int,
 		size: Int,
+		sort: JobPostingListSort,
 	): List<PostingsRecord> {
 		val condition = buildListFilterCondition(
 			uuid,
@@ -126,9 +127,14 @@ class PostingRepository(
 			responseIncludeNull,
 		)
 		val (safePage, safeSize) = normalizePageSize(page, size)
-		return dsl.selectFrom(Tables.POSTINGS)
+		val base = dsl.selectFrom(Tables.POSTINGS)
 			.where(condition)
-			.orderBy(Tables.POSTINGS.UUID)
+		val ordered = when (sort) {
+			JobPostingListSort.UUID_ASC -> base.orderBy(Tables.POSTINGS.UUID.asc())
+			JobPostingListSort.CREATED_AT_DESC ->
+				base.orderBy(Tables.POSTINGS.CREATED_AT.desc(), Tables.POSTINGS.UUID.desc())
+		}
+		return ordered
 			.limit(safeSize)
 			.offset((safePage - 1) * safeSize)
 			.fetch()

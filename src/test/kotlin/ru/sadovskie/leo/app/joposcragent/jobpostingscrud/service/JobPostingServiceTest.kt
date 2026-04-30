@@ -16,6 +16,7 @@ import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsUidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.UuidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.orchestration.OrchestratorEventsProducer
+import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.JobPostingListSort
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.PostingRepository
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
@@ -195,12 +196,12 @@ class JobPostingServiceTest {
 			repo.countFiltered(null, null, null, null, emptyList(), false, emptyList(), false)
 		} returns 0L
 		every {
-			repo.listFiltered(null, null, null, null, emptyList(), false, emptyList(), false, 1, 20)
+			repo.listFiltered(null, null, null, null, emptyList(), false, emptyList(), false, 1, 20, JobPostingListSort.UUID_ASC)
 		} returns emptyList()
 		val service = jobPostingService(repo)
 		assertEquals(
 			JobPostingsList(emptyList(), totalPages = 0),
-			service.list(null, null, null, null, null, null, 1, 20),
+			service.list(null, null, null, null, null, null, null, 1, 20),
 		)
 	}
 
@@ -211,13 +212,44 @@ class JobPostingServiceTest {
 			repo.countFiltered(null, null, null, null, emptyList(), false, emptyList(), false)
 		} returns 21L
 		every {
-			repo.listFiltered(null, null, null, null, emptyList(), false, emptyList(), false, 1, 20)
+			repo.listFiltered(null, null, null, null, emptyList(), false, emptyList(), false, 1, 20, JobPostingListSort.UUID_ASC)
 		} returns emptyList()
 		val service = jobPostingService(repo)
 		assertEquals(
 			JobPostingsList(emptyList(), totalPages = 2),
-			service.list(null, null, null, null, null, null, 1, 20),
+			service.list(null, null, null, null, null, null, null, 1, 20),
 		)
+	}
+
+	@Test
+	fun `list throws 400 on unknown sort`() {
+		val repo = mockk<PostingRepository>()
+		val service = jobPostingService(repo)
+		val ex = assertThrows(ResponseStatusException::class.java) {
+			service.list(null, null, null, null, null, null, "uuid_desc", 1, 20)
+		}
+		assertEquals(HttpStatus.BAD_REQUEST, ex.statusCode)
+		verify(exactly = 0) { repo.countFiltered(any(), any(), any(), any(), any(), any(), any(), any()) }
+		verify(exactly = 0) { repo.listFiltered(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+	}
+
+	@Test
+	fun `list passes created_at_desc sort to repository`() {
+		val repo = mockk<PostingRepository>()
+		val sortSlot = slot<JobPostingListSort>()
+		every {
+			repo.countFiltered(null, null, null, null, emptyList(), false, emptyList(), false)
+		} returns 0L
+		every {
+			repo.listFiltered(
+				null, null, null, null,
+				emptyList(), false, emptyList(), false,
+				1, 20, capture(sortSlot),
+			)
+		} returns emptyList()
+		val service = jobPostingService(repo)
+		service.list(null, null, null, null, null, null, "created_at_desc", 1, 20)
+		assertEquals(JobPostingListSort.CREATED_AT_DESC, sortSlot.captured)
 	}
 
 	@Test

@@ -25,6 +25,7 @@ class JobPostingSearchController(
 		@RequestParam(required = false) company: String?,
 		@RequestParam(name = "evaluationStatus", required = false) evaluationStatusRaw: List<String>?,
 		@RequestParam(name = "responseStatus", required = false) responseStatusRaw: List<String>?,
+		@RequestParam(required = false) sort: String?,
 		@RequestParam(defaultValue = "1") page: Int,
 		@RequestParam(defaultValue = "20") size: Int,
 	): JobPostingsList = jobPostingService.list(
@@ -34,6 +35,7 @@ class JobPostingSearchController(
 		company = company,
 		evaluationStatusRaw = evaluationStatusRaw,
 		responseStatusRaw = responseStatusRaw,
+		sortRaw = sort,
 		page = page,
 		size = size,
 	)

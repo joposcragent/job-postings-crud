@@ -4,8 +4,21 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.EvaluationStatus
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.ResponseStatus
+import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.JobPostingListSort
 
 object ListQueryParamParser {
+	fun parseListSort(raw: String?): JobPostingListSort {
+		if (raw.isNullOrBlank()) return JobPostingListSort.UUID_ASC
+		return when (raw.trim().lowercase()) {
+			"uuid_asc" -> JobPostingListSort.UUID_ASC
+			"created_at_desc" -> JobPostingListSort.CREATED_AT_DESC
+			else -> throw ResponseStatusException(
+				HttpStatus.BAD_REQUEST,
+				"Unknown list sort: $raw",
+			)
+		}
+	}
+
 	fun parseEvaluationStatus(raw: List<String>?): Pair<List<EvaluationStatus>, Boolean> =
 		parseEnumList(raw, EvaluationStatus::lookupLiteral, "evaluation status")
 

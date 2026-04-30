@@ -91,9 +91,11 @@ class JobPostingService(
 		company: String?,
 		evaluationStatusRaw: List<String>?,
 		responseStatusRaw: List<String>?,
+		sortRaw: String?,
 		page: Int,
 		size: Int,
 	): JobPostingsList {
+		val sort = ListQueryParamParser.parseListSort(sortRaw)
 		val (evaluationStatuses, evaluationIncludeNull) =
 			ListQueryParamParser.parseEvaluationStatus(evaluationStatusRaw)
 		val (responseStatuses, responseIncludeNull) =
@@ -125,6 +127,7 @@ class JobPostingService(
 			responseIncludeNull,
 			page,
 			size,
+			sort,
 		)
 		return JobPostingsList(rows.map { PostingMapper.toDto(it) }, totalPages)
 	}
