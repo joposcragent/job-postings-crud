@@ -101,9 +101,10 @@ class PostingRepository(
 		uid: String?,
 		titleSubstring: String?,
 		company: String?,
-		evaluationStatuses: List<EvaluationStatus>?,
-		responseStatuses: List<ResponseStatus>?,
-		includeUnsetResponseStatus: Boolean,
+		evaluationStatuses: List<EvaluationStatus>,
+		evaluationIncludeNull: Boolean,
+		responseStatuses: List<ResponseStatus>,
+		responseIncludeNull: Boolean,
 		page: Int,
 		size: Int,
 	): List<PostingsRecord> {
@@ -113,8 +114,9 @@ class PostingRepository(
 			titleSubstring,
 			company,
 			evaluationStatuses,
+			evaluationIncludeNull,
 			responseStatuses,
-			includeUnsetResponseStatus,
+			responseIncludeNull,
 		)
 		val (safePage, safeSize) = normalizePageSize(page, size)
 		return dsl.selectFrom(Tables.POSTINGS)
@@ -130,9 +132,10 @@ class PostingRepository(
 		uid: String?,
 		titleSubstring: String?,
 		company: String?,
-		evaluationStatuses: List<EvaluationStatus>?,
-		responseStatuses: List<ResponseStatus>?,
-		includeUnsetResponseStatus: Boolean,
+		evaluationStatuses: List<EvaluationStatus>,
+		evaluationIncludeNull: Boolean,
+		responseStatuses: List<ResponseStatus>,
+		responseIncludeNull: Boolean,
 	): Long {
 		val condition = buildListFilterCondition(
 			uuid,
@@ -140,8 +143,9 @@ class PostingRepository(
 			titleSubstring,
 			company,
 			evaluationStatuses,
+			evaluationIncludeNull,
 			responseStatuses,
-			includeUnsetResponseStatus,
+			responseIncludeNull,
 		)
 		return dsl.fetchCount(
 			dsl.selectFrom(Tables.POSTINGS).where(condition),
@@ -153,9 +157,10 @@ class PostingRepository(
 		uid: String?,
 		titleSubstring: String?,
 		company: String?,
-		evaluationStatuses: List<EvaluationStatus>?,
-		responseStatuses: List<ResponseStatus>?,
-		includeUnsetResponseStatus: Boolean,
+		evaluationStatuses: List<EvaluationStatus>,
+		evaluationIncludeNull: Boolean,
+		responseStatuses: List<ResponseStatus>,
+		responseIncludeNull: Boolean,
 	): Condition {
 		var condition: Condition = JooqDsl.trueCondition()
 		if (uuid != null) condition = condition.and(Tables.POSTINGS.UUID.eq(uuid))
@@ -174,12 +179,24 @@ class PostingRepository(
 				),
 			)
 		}
-		if (!evaluationStatuses.isNullOrEmpty()) {
-			condition = condition.and(Tables.POSTINGS.EVALUATION_STATUS.`in`(evaluationStatuses))
-		}
-		val responseIn = responseStatuses?.takeIf { it.isNotEmpty() }
+		val evalIn = evaluationStatuses.takeIf { it.isNotEmpty() }
 		when {
-			responseIn != null && includeUnsetResponseStatus -> {
+			evalIn != null && evaluationIncludeNull -> {
+				condition = condition.and(
+					Tables.POSTINGS.EVALUATION_STATUS.`in`(evalIn)
+						.or(Tables.POSTINGS.EVALUATION_STATUS.isNull),
+				)
+			}
+			evalIn != null -> {
+				condition = condition.and(Tables.POSTINGS.EVALUATION_STATUS.`in`(evalIn))
+			}
+			evaluationIncludeNull -> {
+				condition = condition.and(Tables.POSTINGS.EVALUATION_STATUS.isNull)
+			}
+		}
+		val responseIn = responseStatuses.takeIf { it.isNotEmpty() }
+		when {
+			responseIn != null && responseIncludeNull -> {
 				condition = condition.and(
 					Tables.POSTINGS.RESPONSE_STATUS.`in`(responseIn)
 						.or(Tables.POSTINGS.RESPONSE_STATUS.isNull),
@@ -188,7 +205,7 @@ class PostingRepository(
 			responseIn != null -> {
 				condition = condition.and(Tables.POSTINGS.RESPONSE_STATUS.`in`(responseIn))
 			}
-			includeUnsetResponseStatus -> {
+			responseIncludeNull -> {
 				condition = condition.and(Tables.POSTINGS.RESPONSE_STATUS.isNull)
 			}
 		}

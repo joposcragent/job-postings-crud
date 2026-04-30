@@ -26,7 +26,7 @@ CREATE TABLE job_postings.postings
     content_vector    real[],
     relevance         real,
     evaluation_status job_postings.evaluation_status DEFAULT 'NEW'::job_postings.evaluation_status NOT NULL,
-    response_status   job_postings.response_status   DEFAULT 'NEW'::job_postings.response_status,
+    response_status   job_postings.response_status   DEFAULT 'NEW'::job_postings.response_status NOT NULL,
     publication_date  date                           NOT NULL,
     created_at        timestamptz                    NOT NULL DEFAULT now(),
     updated_at        timestamptz,

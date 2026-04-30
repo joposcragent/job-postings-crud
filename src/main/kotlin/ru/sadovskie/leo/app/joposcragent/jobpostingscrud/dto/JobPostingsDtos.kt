@@ -17,7 +17,7 @@ data class JobPostingsItem(
 	val contentVector: List<Double>? = null,
 	val relevance: Double? = null,
 	val evaluationStatus: EvaluationStatus? = null,
-	val responseStatus: ResponseStatus? = null,
+	val responseStatus: ResponseStatus = ResponseStatus.NEW,
 	val createdAt: OffsetDateTime? = null,
 	val updatedAt: OffsetDateTime? = null,
 )

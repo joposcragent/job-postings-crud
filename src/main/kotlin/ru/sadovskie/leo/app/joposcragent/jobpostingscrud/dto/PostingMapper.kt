@@ -1,6 +1,7 @@
 package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto
 
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.EvaluationStatus
+import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.ResponseStatus
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.tables.records.PostingsRecord
 import java.time.LocalDate
 import java.util.UUID
@@ -19,7 +20,7 @@ object PostingMapper {
 			contentVector = record.contentVector?.toDoubleList(),
 			relevance = record.relevance?.toDouble(),
 			evaluationStatus = record.evaluationStatus,
-			responseStatus = record.responseStatus,
+			responseStatus = record.responseStatus ?: ResponseStatus.NEW,
 			createdAt = record.createdAt,
 			updatedAt = record.updatedAt,
 		)
