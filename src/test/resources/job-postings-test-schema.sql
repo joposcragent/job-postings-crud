@@ -30,5 +30,6 @@ CREATE TABLE job_postings.postings
     publication_date  date                           NOT NULL,
     created_at        timestamptz                    NOT NULL DEFAULT now(),
     updated_at        timestamptz,
-    company           varchar
+    company           varchar,
+    notes             text
 );

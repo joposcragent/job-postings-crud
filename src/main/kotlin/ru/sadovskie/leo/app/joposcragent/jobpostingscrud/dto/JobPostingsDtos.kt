@@ -35,3 +35,11 @@ data class UuidsList(
 data class JobPostingsUidsList(
 	val list: List<String>,
 )
+
+data class JobPostingNotesResponse(
+	val text: String,
+)
+
+data class JobPostingNotesWrite(
+	val text: String,
+)

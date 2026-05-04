@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.EvaluationStatus
 import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.enums.ResponseStatus
+import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingNotesResponse
+import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingNotesWrite
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsItem
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsUidsList
@@ -162,5 +164,17 @@ class JobPostingService(
 			throw ResponseStatusException(HttpStatus.NOT_FOUND)
 		}
 		repository.updateResponseStatus(jobPostingUuid, status)
+	}
+
+	fun getNotes(jobPostingUuid: UUID): JobPostingNotesResponse {
+		val text = repository.getNotesText(jobPostingUuid)
+			?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+		return JobPostingNotesResponse(text)
+	}
+
+	fun replaceNotes(jobPostingUuid: UUID, body: JobPostingNotesWrite) {
+		if (repository.replaceNotes(jobPostingUuid, body.text) == 0) {
+			throw ResponseStatusException(HttpStatus.NOT_FOUND)
+		}
 	}
 }

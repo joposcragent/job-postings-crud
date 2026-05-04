@@ -27,6 +27,21 @@ class PostingRepository(
 			.where(Tables.POSTINGS.UUID.eq(uuid))
 			.fetchOne()
 
+	/**
+	 * @return null если вакансии нет; иначе текст заметки (пустая строка если в БД NULL)
+	 */
+	fun getNotesText(jobPostingUuid: UUID): String? {
+		val row = findByUuid(jobPostingUuid) ?: return null
+		return row.notes ?: ""
+	}
+
+	fun replaceNotes(jobPostingUuid: UUID, text: String): Int =
+		dsl.update(Tables.POSTINGS)
+			.set(Tables.POSTINGS.NOTES, text)
+			.set(Tables.POSTINGS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+			.where(Tables.POSTINGS.UUID.eq(jobPostingUuid))
+			.execute()
+
 	fun existsByUuid(uuid: UUID): Boolean =
 		dsl.fetchExists(
 			dsl.selectOne()
