@@ -5,6 +5,7 @@ package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto
  */
 enum class PostingPatchField(val jsonName: String) {
 	UID("uid"),
+	SEARCH_QUERY_UUID("searchQueryUuid"),
 	PUBLICATION_DATE("publicationDate"),
 	TITLE("title"),
 	COMPANY("company"),

@@ -56,9 +56,11 @@ class JobPostingPatchIntegrationTest @Autowired constructor(
 	fun `patch clears contentVector with empty array and relevance with zero`() {
 		val uuid = UUID.randomUUID()
 		val uid = "patch-it-${uuid.toString().take(8)}"
+		val sq = UUID.fromString("22222222-2222-2222-2222-222222222222")
 		val createJson = """
 			{
 				"uuid": "$uuid",
+				"searchQueryUuid": "$sq",
 				"uid": "$uid",
 				"publicationDate": "2026-04-15",
 				"title": "Integration title",

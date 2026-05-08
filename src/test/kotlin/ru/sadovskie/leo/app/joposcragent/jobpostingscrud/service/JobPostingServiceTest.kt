@@ -29,8 +29,11 @@ class JobPostingServiceTest {
 
 	private val objectMapper = ObjectMapper()
 
+	private val sampleSearchQueryUuid: UUID = UUID.fromString("11111111-1111-1111-1111-111111111111")
+
 	private val sampleItem = JobPostingsItem(
 		uuid = uuid,
+		searchQueryUuid = sampleSearchQueryUuid,
 		uid = "131927888",
 		publicationDate = "2026-01-15",
 		title = "Developer",
@@ -59,6 +62,7 @@ class JobPostingServiceTest {
 		val row = mockk<PostingsRecord>()
 		val created = OffsetDateTime.parse("2026-01-01T12:00:00Z")
 		every { row.uuid } returns uuid
+		every { row.searchQueryUuid } returns sampleSearchQueryUuid
 		every { row.uid } returns "131927888"
 		every { row.publicationDate } returns LocalDate.of(2026, 1, 15)
 		every { row.title } returns "Developer"
@@ -77,6 +81,7 @@ class JobPostingServiceTest {
 		assertEquals(uuid, dto.uuid)
 		assertEquals("131927888", dto.uid)
 		assertEquals("Developer", dto.title)
+		assertEquals(sampleSearchQueryUuid, dto.searchQueryUuid)
 	}
 
 	@Test

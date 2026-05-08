@@ -70,6 +70,7 @@ class PostingRepository(
 			.set(Tables.POSTINGS.RELEVANCE, r.relevance)
 			.set(Tables.POSTINGS.EVALUATION_STATUS, r.evaluationStatus)
 			.set(Tables.POSTINGS.RESPONSE_STATUS, r.responseStatus)
+			.set(Tables.POSTINGS.SEARCH_QUERY_UUID, r.searchQueryUuid)
 			.execute()
 	}
 
@@ -79,6 +80,7 @@ class PostingRepository(
 		values.forEach { (field, v) ->
 			when (field) {
 				PostingPatchField.UID -> q.addValue(Tables.POSTINGS.UID, v as String)
+				PostingPatchField.SEARCH_QUERY_UUID -> q.addValue(Tables.POSTINGS.SEARCH_QUERY_UUID, v as UUID)
 				PostingPatchField.PUBLICATION_DATE -> q.addValue(Tables.POSTINGS.PUBLICATION_DATE, v as LocalDate)
 				PostingPatchField.TITLE -> q.addValue(Tables.POSTINGS.TITLE, v as String)
 				PostingPatchField.COMPANY -> q.addValue(Tables.POSTINGS.COMPANY, v as String?)

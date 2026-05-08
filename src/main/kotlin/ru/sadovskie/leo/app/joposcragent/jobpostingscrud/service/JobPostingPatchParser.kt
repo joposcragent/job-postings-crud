@@ -9,8 +9,12 @@ import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.PostingMapper
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.PostingPatchField
 import java.time.LocalDate
 import java.util.EnumMap
+import java.util.UUID
 
 internal object JobPostingPatchParser {
+
+	private val sentinelSearchQueryUuid: UUID =
+		UUID.fromString("00000000-0000-0000-0000-000000000000")
 
 	fun parse(body: JsonNode): EnumMap<PostingPatchField, Any?> {
 		if (!body.isObject) {
@@ -42,6 +46,7 @@ internal object JobPostingPatchParser {
 	private fun parseValue(field: PostingPatchField, node: JsonNode): Any? =
 		when (field) {
 			PostingPatchField.UID -> requireText(node, field)
+			PostingPatchField.SEARCH_QUERY_UUID -> parseUuid(node, field)
 			PostingPatchField.TITLE -> requireText(node, field)
 			PostingPatchField.URL -> requireText(node, field)
 			PostingPatchField.COMPANY -> requireText(node, field)
@@ -57,6 +62,26 @@ internal object JobPostingPatchParser {
 	private fun requireText(node: JsonNode, field: PostingPatchField): String {
 		if (!node.isTextual) throw badType(field, "строка")
 		return node.asText()
+	}
+
+	private fun parseUuid(node: JsonNode, field: PostingPatchField): UUID {
+		if (!node.isTextual) throw badType(field, "строка UUID")
+		val raw = node.asText().trim()
+		if (raw.isEmpty()) {
+			throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Поле ${field.jsonName} не может быть пустым")
+		}
+		return try {
+			val u = UUID.fromString(raw)
+			if (u == sentinelSearchQueryUuid) {
+				throw ResponseStatusException(
+					HttpStatus.BAD_REQUEST,
+					"Поле ${field.jsonName}: недопустимое значение UUID",
+				)
+			}
+			u
+		} catch (_: IllegalArgumentException) {
+			throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Некорректное значение ${field.jsonName}")
+		}
 	}
 
 	private fun parseLocalDate(node: JsonNode, field: PostingPatchField): LocalDate =

@@ -11,6 +11,7 @@ object PostingMapper {
 	fun toDto(record: PostingsRecord): JobPostingsItem =
 		JobPostingsItem(
 			uuid = record.uuid,
+			searchQueryUuid = record.searchQueryUuid,
 			uid = record.uid,
 			publicationDate = record.publicationDate?.toString() ?: "",
 			title = record.title,
@@ -39,6 +40,7 @@ object PostingMapper {
 	): PostingsRecord =
 		PostingsRecord().apply {
 			this.uuid = uuid
+			searchQueryUuid = item.searchQueryUuid
 			uid = item.uid
 			publicationDate = LocalDate.parse(item.publicationDate)
 			title = item.title

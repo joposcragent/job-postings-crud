@@ -31,5 +31,6 @@ CREATE TABLE job_postings.postings
     created_at        timestamptz                    NOT NULL DEFAULT now(),
     updated_at        timestamptz,
     company           varchar,
-    notes             text
+    notes             text,
+    search_query_uuid uuid NOT NULL
 );

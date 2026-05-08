@@ -69,9 +69,11 @@ class JobPostingControllerWebMvcTest {
 
 	private fun minimalCreateJson(jobPostingUuid: UUID): String {
 		val uid = "webmvc-${jobPostingUuid.toString().take(8)}"
+		val sq = UUID.fromString("33333333-3333-3333-3333-333333333333")
 		return """
 			{
 				"uuid": "$jobPostingUuid",
+				"searchQueryUuid": "$sq",
 				"uid": "$uid",
 				"publicationDate": "2026-04-15",
 				"title": "Title",

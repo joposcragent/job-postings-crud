@@ -8,6 +8,7 @@ import java.util.UUID
 
 data class JobPostingsItem(
 	val uuid: UUID,
+	val searchQueryUuid: UUID,
 	val uid: String,
 	val publicationDate: String,
 	val title: String,
