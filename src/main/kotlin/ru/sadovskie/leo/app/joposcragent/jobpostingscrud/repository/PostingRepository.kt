@@ -2,6 +2,8 @@ package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository
 
 import org.jooq.Condition
 import org.jooq.DSLContext
+import org.jooq.Record1
+import org.jooq.Select
 import org.jooq.impl.DSL as JooqDsl
 import org.springframework.stereotype.Repository
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.PostingPatchField
@@ -197,18 +199,96 @@ class PostingRepository(
 		if (uid != null) condition = condition.and(Tables.POSTINGS.UID.eq(uid))
 		if (titleSubstring != null) {
 			condition = condition.and(
-				Tables.POSTINGS.TITLE.like(
-					JooqDsl.concat(JooqDsl.inline("%"), JooqDsl.`val`(titleSubstring), JooqDsl.inline("%")),
-				),
+				Tables.POSTINGS.TITLE.like(likePattern(titleSubstring)),
 			)
 		}
 		if (company != null) {
 			condition = condition.and(
-				Tables.POSTINGS.COMPANY.like(
-					JooqDsl.concat(JooqDsl.inline("%"), JooqDsl.`val`(company), JooqDsl.inline("%")),
-				),
+				Tables.POSTINGS.COMPANY.like(likePattern(company)),
 			)
 		}
+		return condition.and(
+			buildEvaluationResponseCondition(
+				evaluationStatuses,
+				evaluationIncludeNull,
+				responseStatuses,
+				responseIncludeNull,
+			),
+		)
+	}
+
+	private fun likePattern(substring: String) =
+		JooqDsl.concat(JooqDsl.inline("%"), JooqDsl.`val`(substring), JooqDsl.inline("%"))
+
+	private fun substringUuidUnionSelect(substring: String): Select<Record1<UUID>> {
+		val pattern = likePattern(substring)
+		val q1 = dsl.select(Tables.POSTINGS.UUID).from(Tables.POSTINGS).where(Tables.POSTINGS.UID.like(pattern))
+		val q2 = dsl.select(Tables.POSTINGS.UUID).from(Tables.POSTINGS).where(Tables.POSTINGS.TITLE.like(pattern))
+		val q3 = dsl.select(Tables.POSTINGS.UUID).from(Tables.POSTINGS).where(Tables.POSTINGS.URL.like(pattern))
+		val q4 = dsl.select(Tables.POSTINGS.UUID).from(Tables.POSTINGS).where(Tables.POSTINGS.COMPANY.like(pattern))
+		return q1.union(q2).union(q3).union(q4)
+	}
+
+	fun listFilteredBySubstringUnion(
+		substring: String,
+		evaluationStatuses: List<EvaluationStatus>,
+		evaluationIncludeNull: Boolean,
+		responseStatuses: List<ResponseStatus>,
+		responseIncludeNull: Boolean,
+		page: Int,
+		size: Int,
+		sort: JobPostingListSort,
+	): List<PostingsRecord> {
+		val uuidCondition = Tables.POSTINGS.UUID.`in`(substringUuidUnionSelect(substring))
+		val condition = uuidCondition.and(
+			buildEvaluationResponseCondition(
+				evaluationStatuses,
+				evaluationIncludeNull,
+				responseStatuses,
+				responseIncludeNull,
+			),
+		)
+		val (safePage, safeSize) = normalizePageSize(page, size)
+		val base = dsl.selectFrom(Tables.POSTINGS).where(condition)
+		val ordered = when (sort) {
+			JobPostingListSort.UUID_ASC -> base.orderBy(Tables.POSTINGS.UUID.asc())
+			JobPostingListSort.CREATED_AT_DESC ->
+				base.orderBy(Tables.POSTINGS.CREATED_AT.desc(), Tables.POSTINGS.UUID.desc())
+		}
+		return ordered
+			.limit(safeSize)
+			.offset((safePage - 1) * safeSize)
+			.fetch()
+	}
+
+	fun countFilteredBySubstringUnion(
+		substring: String,
+		evaluationStatuses: List<EvaluationStatus>,
+		evaluationIncludeNull: Boolean,
+		responseStatuses: List<ResponseStatus>,
+		responseIncludeNull: Boolean,
+	): Long {
+		val uuidCondition = Tables.POSTINGS.UUID.`in`(substringUuidUnionSelect(substring))
+		val condition = uuidCondition.and(
+			buildEvaluationResponseCondition(
+				evaluationStatuses,
+				evaluationIncludeNull,
+				responseStatuses,
+				responseIncludeNull,
+			),
+		)
+		return dsl.fetchCount(
+			dsl.selectFrom(Tables.POSTINGS).where(condition),
+		).toLong()
+	}
+
+	private fun buildEvaluationResponseCondition(
+		evaluationStatuses: List<EvaluationStatus>,
+		evaluationIncludeNull: Boolean,
+		responseStatuses: List<ResponseStatus>,
+		responseIncludeNull: Boolean,
+	): Condition {
+		var condition: Condition = JooqDsl.trueCondition()
 		val evalIn = evaluationStatuses.takeIf { it.isNotEmpty() }
 		when {
 			evalIn != null && evaluationIncludeNull -> {

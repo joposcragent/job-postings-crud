@@ -258,6 +258,43 @@ class JobPostingServiceTest {
 	}
 
 	@Test
+	fun `listBySubstring throws 400 when substring blank`() {
+		val repo = mockk<PostingRepository>()
+		val service = jobPostingService(repo)
+		val ex = assertThrows(ResponseStatusException::class.java) {
+			service.listBySubstring("   ", null, null, null, 1, 20)
+		}
+		assertEquals(HttpStatus.BAD_REQUEST, ex.statusCode)
+		verify(exactly = 0) { repo.countFilteredBySubstringUnion(any(), any(), any(), any(), any()) }
+		verify(exactly = 0) { repo.listFilteredBySubstringUnion(any(), any(), any(), any(), any(), any(), any(), any()) }
+	}
+
+	@Test
+	fun `listBySubstring delegates to union repository methods`() {
+		val repo = mockk<PostingRepository>()
+		every {
+			repo.countFilteredBySubstringUnion("acme", emptyList(), false, emptyList(), false)
+		} returns 0L
+		every {
+			repo.listFilteredBySubstringUnion(
+				"acme",
+				emptyList(),
+				false,
+				emptyList(),
+				false,
+				1,
+				20,
+				JobPostingListSort.UUID_ASC,
+			)
+		} returns emptyList()
+		val service = jobPostingService(repo)
+		assertEquals(
+			JobPostingsList(emptyList(), totalPages = 0),
+			service.listBySubstring("acme", null, null, null, 1, 20),
+		)
+	}
+
+	@Test
 	fun `findByUuids throws 404 when empty`() {
 		val repo = mockk<PostingRepository>()
 		every { repo.findByUuids(listOf(uuid)) } returns emptyList()

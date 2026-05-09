@@ -40,6 +40,26 @@ class JobPostingSearchController(
 		size = size,
 	)
 
+	@GetMapping(
+		"/job-postings/search-query/by-substring",
+		produces = [MediaType.APPLICATION_JSON_VALUE],
+	)
+	fun listBySubstring(
+		@RequestParam(required = false) substring: String?,
+		@RequestParam(name = "evaluationStatus", required = false) evaluationStatusRaw: List<String>?,
+		@RequestParam(name = "responseStatus", required = false) responseStatusRaw: List<String>?,
+		@RequestParam(required = false) sort: String?,
+		@RequestParam(defaultValue = "1") page: Int,
+		@RequestParam(defaultValue = "20") size: Int,
+	): JobPostingsList = jobPostingService.listBySubstring(
+		substring = substring,
+		evaluationStatusRaw = evaluationStatusRaw,
+		responseStatusRaw = responseStatusRaw,
+		sortRaw = sort,
+		page = page,
+		size = size,
+	)
+
 	@PostMapping(
 		"/job-postings/search-query/by-uuids",
 		consumes = [MediaType.APPLICATION_JSON_VALUE],

@@ -134,6 +134,49 @@ class JobPostingService(
 		return JobPostingsList(rows.map { PostingMapper.toDto(it) }, totalPages)
 	}
 
+	fun listBySubstring(
+		substring: String?,
+		evaluationStatusRaw: List<String>?,
+		responseStatusRaw: List<String>?,
+		sortRaw: String?,
+		page: Int,
+		size: Int,
+	): JobPostingsList {
+		if (substring.isNullOrBlank()) {
+			throw ResponseStatusException(HttpStatus.BAD_REQUEST, "substring must not be blank")
+		}
+		val trimmed = substring.trim()
+		val sort = ListQueryParamParser.parseListSort(sortRaw)
+		val (evaluationStatuses, evaluationIncludeNull) =
+			ListQueryParamParser.parseEvaluationStatus(evaluationStatusRaw)
+		val (responseStatuses, responseIncludeNull) =
+			ListQueryParamParser.parseResponseStatus(responseStatusRaw)
+		val (_, safeSize) = PostingRepository.normalizePageSize(page, size)
+		val totalCount = repository.countFilteredBySubstringUnion(
+			trimmed,
+			evaluationStatuses,
+			evaluationIncludeNull,
+			responseStatuses,
+			responseIncludeNull,
+		)
+		val totalPages = if (totalCount == 0L) {
+			0
+		} else {
+			((totalCount + safeSize - 1L) / safeSize).toInt()
+		}
+		val rows = repository.listFilteredBySubstringUnion(
+			trimmed,
+			evaluationStatuses,
+			evaluationIncludeNull,
+			responseStatuses,
+			responseIncludeNull,
+			page,
+			size,
+			sort,
+		)
+		return JobPostingsList(rows.map { PostingMapper.toDto(it) }, totalPages)
+	}
+
 	fun findByUuids(body: UuidsList): JobPostingsList {
 		val rows = repository.findByUuids(body.list)
 		if (rows.isEmpty()) {
