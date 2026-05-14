@@ -19,7 +19,7 @@ plugins {
 }
 
 group = "ru.sadovskie.leo.app.joposcragent"
-version = "1.8.0"
+version = "1.9.0"
 
 jacoco {
 	toolVersion = "0.8.12"
@@ -39,6 +39,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-jooq")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
+	implementation("org.springframework.boot:spring-boot-starter-kafka")
 	implementation("org.postgresql:postgresql")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -54,6 +55,8 @@ dependencies {
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 	testImplementation("org.testcontainers:postgresql:1.20.4")
+	testImplementation("org.testcontainers:kafka:1.20.4")
+	testImplementation("org.springframework.kafka:spring-kafka-test")
 	testImplementation("io.mockk:mockk-jvm:1.14.6")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

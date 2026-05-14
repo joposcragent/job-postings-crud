@@ -15,7 +15,6 @@ import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsItem
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.JobPostingsUidsList
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.dto.UuidsList
-import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.orchestration.OrchestratorEventsProducer
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.JobPostingListSort
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.PostingRepository
 import tools.jackson.databind.ObjectMapper
@@ -40,10 +39,7 @@ class JobPostingServiceTest {
 		url = "https://example.com/v/131927888",
 	)
 
-	private fun jobPostingService(
-		repo: PostingRepository,
-		orchestrator: OrchestratorEventsProducer = mockk(relaxed = true),
-	) = JobPostingService(repo, orchestrator)
+	private fun jobPostingService(repo: PostingRepository) = JobPostingService(repo)
 
 	@Test
 	fun `get throws 404 when not found`() {
@@ -117,81 +113,33 @@ class JobPostingServiceTest {
 		every { repo.existsByUuid(uuid) } returns false
 		every { repo.existsByUid("131927888") } returns false
 		every { repo.insert(uuid, sampleItem) } returns Unit
-		val orch = mockk<OrchestratorEventsProducer>(relaxed = true)
-		val service = jobPostingService(repo, orch)
+		val service = jobPostingService(repo)
 		service.create(uuid, sampleItem)
 		verify(exactly = 1) { repo.insert(uuid, sampleItem) }
-		verify(exactly = 0) { orch.publishEvaluationQueued(any(), any(), any()) }
-		verify(exactly = 0) { orch.publishSaveFailedProgress(any(), any(), any(), any(), any()) }
 	}
 
 	@Test
-	fun `create publishes evaluation when correlation id present`() {
+	fun `create ignores correlation id and only inserts`() {
 		val repo = mockk<PostingRepository>()
-		val orch = mockk<OrchestratorEventsProducer>(relaxed = true)
 		every { repo.existsByUuid(uuid) } returns false
 		every { repo.existsByUid("131927888") } returns false
 		every { repo.insert(uuid, sampleItem) } returns Unit
 		val cid = UUID.randomUUID()
-		val service = jobPostingService(repo, orch)
+		val service = jobPostingService(repo)
 		service.create(uuid, sampleItem, cid)
-		verify(exactly = 1) { orch.publishEvaluationQueued(cid, uuid, any()) }
-		verify(exactly = 0) { orch.publishSaveFailedProgress(any(), any(), any(), any(), any()) }
+		verify(exactly = 1) { repo.insert(uuid, sampleItem) }
 	}
 
 	@Test
-	fun `create publishes save failed when insert throws and correlation id present`() {
+	fun `create on uuid conflict does not insert with correlation id`() {
 		val repo = mockk<PostingRepository>()
-		val orch = mockk<OrchestratorEventsProducer>(relaxed = true)
-		every { repo.existsByUuid(uuid) } returns false
-		every { repo.existsByUid("131927888") } returns false
-		every { repo.insert(uuid, sampleItem) } throws RuntimeException("db fail")
-		val cid = UUID.randomUUID()
-		val service = jobPostingService(repo, orch)
-		assertThrows(RuntimeException::class.java) {
-			service.create(uuid, sampleItem, cid)
-		}
-		val logSlot = slot<String>()
-		verify(exactly = 1) {
-			orch.publishSaveFailedProgress(cid, uuid, sampleItem.url, capture(logSlot), any())
-		}
-		assertEquals("db fail", logSlot.captured)
-		verify(exactly = 0) { orch.publishEvaluationQueued(any(), any(), any()) }
-	}
-
-	@Test
-	fun `create publishes save failed when evaluation throws after insert`() {
-		val repo = mockk<PostingRepository>()
-		val orch = mockk<OrchestratorEventsProducer>(relaxed = true)
-		every { repo.existsByUuid(uuid) } returns false
-		every { repo.existsByUid("131927888") } returns false
-		every { repo.insert(uuid, sampleItem) } returns Unit
-		every { orch.publishEvaluationQueued(any(), any(), any()) } throws IllegalStateException("orchestrator down")
-		val cid = UUID.randomUUID()
-		val service = jobPostingService(repo, orch)
-		val ex = assertThrows(IllegalStateException::class.java) {
-			service.create(uuid, sampleItem, cid)
-		}
-		assertEquals("orchestrator down", ex.message)
-		val logSlot2 = slot<String>()
-		verify(exactly = 1) {
-			orch.publishSaveFailedProgress(cid, uuid, sampleItem.url, capture(logSlot2), any())
-		}
-		assertEquals("orchestrator down", logSlot2.captured)
-	}
-
-	@Test
-	fun `create on uuid conflict does not call orchestrator with correlation id`() {
-		val repo = mockk<PostingRepository>()
-		val orch = mockk<OrchestratorEventsProducer>(relaxed = true)
 		every { repo.existsByUuid(uuid) } returns true
 		val cid = UUID.randomUUID()
-		val service = jobPostingService(repo, orch)
+		val service = jobPostingService(repo)
 		assertThrows(ResponseStatusException::class.java) {
 			service.create(uuid, sampleItem, cid)
 		}
-		verify(exactly = 0) { orch.publishEvaluationQueued(any(), any(), any()) }
-		verify(exactly = 0) { orch.publishSaveFailedProgress(any(), any(), any(), any(), any()) }
+		verify(exactly = 0) { repo.insert(any(), any()) }
 	}
 
 	@Test

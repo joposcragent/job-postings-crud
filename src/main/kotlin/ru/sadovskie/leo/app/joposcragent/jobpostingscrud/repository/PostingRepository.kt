@@ -58,6 +58,13 @@ class PostingRepository(
 				.where(Tables.POSTINGS.UID.eq(uid)),
 		)
 
+	fun findUuidByUid(uid: String): UUID? =
+		dsl.select(Tables.POSTINGS.UUID)
+			.from(Tables.POSTINGS)
+			.where(Tables.POSTINGS.UID.eq(uid))
+			.fetchOne()
+			?.value1()
+
 	fun insert(uuid: UUID, item: JobPostingsItem) {
 		val r = PostingMapper.newRecord(uuid, item)
 		dsl.insertInto(Tables.POSTINGS)

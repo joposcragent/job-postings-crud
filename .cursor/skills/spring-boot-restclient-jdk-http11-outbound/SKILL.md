@@ -52,4 +52,4 @@ Do **not** rely on `JdkClientHttpRequestFactory()` with no arguments for calls t
 
 ## Related pattern in this repo
 
-`CeleryOrchestratorClientConfig` in **job-postings-crud** configures the celery-orchestrator `RestClient` with `HTTP_1_1` for the reasons above.
+Other JVM services that call plain-HTTP peers with Spring `RestClient` should use the same `HttpClient.Version.HTTP_1_1` plus a buffering `ClientHttpRequestFactory` when you see `Upgrade: h2c` or empty bodies on the wire.
