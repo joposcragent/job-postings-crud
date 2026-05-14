@@ -41,34 +41,6 @@ class JobPostingCreateKafkaProcessor(
 		val jobUuid = parsed.jobUuid
 		val messageKey = parsed.messageKey
 
-		val existingByUuid = repository.findByUuid(jobPostingUuid)
-		if (existingByUuid != null) {
-			if (existingByUuid.uid == item.uid) {
-				resultPublisher.publishSucceeded(jobUuid, messageKey, jobPostingUuid)
-				return
-			}
-			resultPublisher.publishFailed(
-				jobUuid,
-				messageKey,
-				"Конфликт: uuid $jobPostingUuid уже занят другим uid",
-			)
-			return
-		}
-
-		val uuidForExistingUid = repository.findUuidByUid(item.uid)
-		if (uuidForExistingUid != null) {
-			if (uuidForExistingUid == jobPostingUuid) {
-				resultPublisher.publishSucceeded(jobUuid, messageKey, jobPostingUuid)
-			} else {
-				resultPublisher.publishFailed(
-					jobUuid,
-					messageKey,
-					"Вакансия с uid ${item.uid} уже есть в БД с другим uuid",
-				)
-			}
-			return
-		}
-
 		try {
 			repository.insert(jobPostingUuid, item)
 			resultPublisher.publishSucceeded(jobUuid, messageKey, jobPostingUuid)

@@ -19,7 +19,7 @@ plugins {
 }
 
 group = "ru.sadovskie.leo.app.joposcragent"
-version = "1.9.0"
+version = "1.9.1"
 
 jacoco {
 	toolVersion = "0.8.12"

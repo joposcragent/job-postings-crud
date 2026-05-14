@@ -5,7 +5,6 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.junit.jupiter.api.Test
-import ru.sadovskie.leo.app.joposcragent.jobpostings.jooq.tables.records.PostingsRecord
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.PostingRepository
 import tools.jackson.databind.json.JsonMapper
 import java.util.UUID
@@ -46,8 +45,6 @@ class JobPostingCreateKafkaProcessorTest {
 		""".trimIndent()
 		val envelope = """{"headers":{"type":"async-job.job-posting-create-begin"},"payload":$payload}"""
 		val repo = mockk<PostingRepository>()
-		every { repo.findByUuid(postingUuid) } returns null
-		every { repo.findUuidByUid("u-proc-1") } returns null
 		every { repo.insert(postingUuid, any()) } returns Unit
 		val publisher = mockk<JobPostingCreateResultPublisher>(relaxed = true)
 		val processor = JobPostingCreateKafkaProcessor(repo, publisher, json)
@@ -57,12 +54,10 @@ class JobPostingCreateKafkaProcessorTest {
 	}
 
 	@Test
-	fun `handle idempotent by uuid and uid`() {
+	fun `handle insert failure publishes failed`() {
 		val jobUuid = UUID.fromString("44444444-4444-4444-8444-444444444444")
 		val postingUuid = UUID.fromString("55555555-5555-5555-8555-555555555555")
 		val sq = UUID.fromString("66666666-6666-4666-8666-666666666666")
-		val row = mockk<PostingsRecord>()
-		every { row.uid } returns "same-uid"
 		val payload = """
 			{
 				"jobUuid": "$jobUuid",
@@ -78,11 +73,12 @@ class JobPostingCreateKafkaProcessorTest {
 		""".trimIndent()
 		val envelope = """{"headers":{},"payload":$payload}"""
 		val repo = mockk<PostingRepository>()
-		every { repo.findByUuid(postingUuid) } returns row
+		every { repo.insert(postingUuid, any()) } throws IllegalStateException("duplicate key")
 		val publisher = mockk<JobPostingCreateResultPublisher>(relaxed = true)
 		val processor = JobPostingCreateKafkaProcessor(repo, publisher, json)
 		processor.handle(ConsumerRecord("async-job.job-posting-create", 0, 0L, "k", envelope))
-		verify(exactly = 0) { repo.insert(any(), any()) }
-		verify(exactly = 1) { publisher.publishSucceeded(jobUuid, "k", postingUuid) }
+		verify(exactly = 1) { repo.insert(postingUuid, any()) }
+		verify(exactly = 1) { publisher.publishFailed(jobUuid, "k", "duplicate key") }
+		verify(exactly = 0) { publisher.publishSucceeded(any(), any(), any()) }
 	}
 }
