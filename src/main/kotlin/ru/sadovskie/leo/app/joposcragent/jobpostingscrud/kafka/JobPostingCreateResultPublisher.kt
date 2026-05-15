@@ -74,13 +74,15 @@ class JobPostingCreateResultPublisher(
 			json,
 			headers,
 		)
-		log.debug(
-			"kafka produce: topic={} key={} type={} payload={}",
-			record.topic(),
-			messageKey,
-			JobPostingOrchestrationMessageTypes.JOB_POSTING_CREATE_RESULT,
-			LogTruncate.forLog(json),
-		)
+		if (log.isDebugEnabled) {
+			log.debug(
+				"kafka produce: topic={} key={} type={} payload={}",
+				record.topic(),
+				messageKey,
+				JobPostingOrchestrationMessageTypes.JOB_POSTING_CREATE_RESULT,
+				LogTruncate.forLog(json),
+			)
+		}
 		try {
 			kafkaTemplate.send(record).get()
 		} catch (e: Exception) {

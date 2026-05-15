@@ -36,19 +36,21 @@ class HttpExchangeDebugLoggingFilter : OncePerRequestFilter() {
 		try {
 			filterChain.doFilter(requestWrapper, responseWrapper)
 		} finally {
-			val encoding = request.characterEncoding?.let { runCatching { Charset.forName(it) }.getOrNull() }
-				?: StandardCharsets.UTF_8
-			val reqBody = LogTruncate.forLog(requestWrapper.contentAsByteArray, encoding)
-			val resBody = LogTruncate.forLog(responseWrapper.contentAsByteArray, encoding)
-			log.debug(
-				"HTTP {} {}?{} status={} reqBody={} resBody={}",
-				request.method,
-				request.requestURI,
-				request.queryString ?: "",
-				responseWrapper.status,
-				reqBody,
-				resBody,
-			)
+			if (log.isDebugEnabled) {
+				val encoding = request.characterEncoding?.let { runCatching { Charset.forName(it) }.getOrNull() }
+					?: StandardCharsets.UTF_8
+				val reqBody = LogTruncate.forLog(requestWrapper.contentAsByteArray, encoding)
+				val resBody = LogTruncate.forLog(responseWrapper.contentAsByteArray, encoding)
+				log.debug(
+					"HTTP {} {}?{} status={} reqBody={} resBody={}",
+					request.method,
+					request.requestURI,
+					request.queryString ?: "",
+					responseWrapper.status,
+					reqBody,
+					resBody,
+				)
+			}
 			responseWrapper.copyBodyToResponse()
 		}
 	}

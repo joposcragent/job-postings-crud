@@ -23,18 +23,20 @@ class JobPostingCreateKafkaListener(
 	fun onMessage(record: ConsumerRecord<String, String>) {
 		val type = record.headers().lastHeader("type")?.value()?.toString(Charsets.UTF_8)
 			?: record.value()?.let { parseTypeFromJson(it) }
-		val valuePreview = LogTruncate.forLog(record.value())
-		val headersPreview = formatHeaders(record)
-		log.debug(
-			"kafka consume: topic={} partition={} offset={} key={} type={} headers={} value={}",
-			record.topic(),
-			record.partition(),
-			record.offset(),
-			record.key(),
-			type,
-			headersPreview,
-			valuePreview,
-		)
+		if (log.isDebugEnabled) {
+			val valuePreview = LogTruncate.forLog(record.value())
+			val headersPreview = formatHeaders(record)
+			log.debug(
+				"kafka consume: topic={} partition={} offset={} key={} type={} headers={} value={}",
+				record.topic(),
+				record.partition(),
+				record.offset(),
+				record.key(),
+				type,
+				headersPreview,
+				valuePreview,
+			)
+		}
 		if (type == null) {
 			log.info("kafka consume: skip job-posting-create message without type key={}", record.key())
 			return

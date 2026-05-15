@@ -28,11 +28,10 @@ class JobPostingCreateKafkaProcessor(
 			log.warn("job-posting-create-begin: missing or invalid body")
 			return
 		}
-		log.debug(
-			"job-posting-create-begin: parsed envelope key={} payload={}",
-			record.key(),
-			LogTruncate.forLog(jsonMapper.writeValueAsString(payload)),
-		)
+		if (log.isDebugEnabled) {
+			val payloadPreview = LogTruncate.forLog(jsonMapper.writeValueAsString(payload))
+			log.debug("job-posting-create-begin: parsed envelope key={} payload={}", record.key(), payloadPreview)
+		}
 		when (val parsed = JobPostingCreateBeginPayloadMapper.parse(record.key(), payload)) {
 			is BeginPayloadParseResult.Invalid -> {
 				log.warn("job-posting-create-begin: {}", parsed.reason)
