@@ -53,17 +53,7 @@ class JobPostingCreateResultPublisher(
 		if (jobPostingUuid != null && status == "SUCCEEDED") {
 			payload["jobPostingUuid"] = jobPostingUuid.toString()
 		}
-		val headersJson = mapOf(
-			"key" to messageKey,
-			"createdAt" to createdAt,
-			"type" to JobPostingOrchestrationMessageTypes.JOB_POSTING_CREATE_RESULT,
-			"schemaVersion" to JobPostingOrchestrationKafkaConstants.SCHEMA_VERSION,
-		)
-		val envelope = mapOf(
-			"headers" to headersJson,
-			"payload" to payload,
-		)
-		val json = jsonMapper.writeValueAsString(envelope)
+		val json = jsonMapper.writeValueAsString(payload)
 		val headers = listOf(
 			RecordHeader("key", messageKey.toByteArray(StandardCharsets.UTF_8)),
 			RecordHeader("type", JobPostingOrchestrationMessageTypes.JOB_POSTING_CREATE_RESULT.toByteArray(StandardCharsets.UTF_8)),

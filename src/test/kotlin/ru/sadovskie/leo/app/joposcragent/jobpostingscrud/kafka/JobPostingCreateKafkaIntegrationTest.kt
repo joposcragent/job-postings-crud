@@ -71,16 +71,7 @@ class JobPostingCreateKafkaIntegrationTest @Autowired constructor(
 			"publicationDate" to "2026-05-14T12:00:00Z",
 		)
 		val createdAt = "2026-05-14T12:00:01Z"
-		val envelope = mapOf(
-			"headers" to mapOf(
-				"key" to jobUuid.toString(),
-				"createdAt" to createdAt,
-				"type" to JobPostingOrchestrationMessageTypes.JOB_POSTING_CREATE_BEGIN,
-				"schemaVersion" to JobPostingOrchestrationKafkaConstants.SCHEMA_VERSION,
-			),
-			"payload" to payload,
-		)
-		val jsonStr = json.writeValueAsString(envelope)
+		val jsonStr = json.writeValueAsString(payload)
 		val headers = listOf(
 			RecordHeader("key", jobUuid.toString().toByteArray(StandardCharsets.UTF_8)),
 			RecordHeader("type", JobPostingOrchestrationMessageTypes.JOB_POSTING_CREATE_BEGIN.toByteArray(StandardCharsets.UTF_8)),

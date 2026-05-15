@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.PostingRepository
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 import java.util.UUID
 
@@ -22,8 +23,8 @@ class JobPostingCreateKafkaProcessor(
 			log.warn("job-posting-create-begin: invalid json: {}", it.message)
 			return
 		}
-		val payload = root.get("payload") ?: run {
-			log.warn("job-posting-create-begin: missing payload")
+		val payload = root.kafkaMessagePayloadOrNull() ?: run {
+			log.warn("job-posting-create-begin: missing or invalid body")
 			return
 		}
 		when (val parsed = JobPostingCreateBeginPayloadMapper.parse(record.key(), payload)) {
@@ -52,5 +53,15 @@ class JobPostingCreateKafkaProcessor(
 				e.message ?: e.toString(),
 			)
 		}
+	}
+}
+
+private fun JsonNode.kafkaMessagePayloadOrNull(): JsonNode? {
+	val headers = get("headers")
+	val payload = get("payload")
+	return when {
+		headers != null && headers.isObject && payload != null && payload.isObject -> payload
+		isObject -> this
+		else -> null
 	}
 }

@@ -43,12 +43,11 @@ class JobPostingCreateKafkaProcessorTest {
 				"publicationDate": "2026-06-01"
 			}
 		""".trimIndent()
-		val envelope = """{"headers":{"type":"async-job.job-posting-create-begin"},"payload":$payload}"""
 		val repo = mockk<PostingRepository>()
 		every { repo.insert(postingUuid, any()) } returns Unit
 		val publisher = mockk<JobPostingCreateResultPublisher>(relaxed = true)
 		val processor = JobPostingCreateKafkaProcessor(repo, publisher, json)
-		processor.handle(ConsumerRecord("async-job.job-posting-create", 0, 0L, jobUuid.toString(), envelope))
+		processor.handle(ConsumerRecord("async-job.job-posting-create", 0, 0L, jobUuid.toString(), payload))
 		verify(exactly = 1) { repo.insert(postingUuid, any()) }
 		verify(exactly = 1) { publisher.publishSucceeded(jobUuid, jobUuid.toString(), postingUuid) }
 	}
@@ -71,12 +70,11 @@ class JobPostingCreateKafkaProcessorTest {
 				"publicationDate": "2026-06-02"
 			}
 		""".trimIndent()
-		val envelope = """{"headers":{},"payload":$payload}"""
 		val repo = mockk<PostingRepository>()
 		every { repo.insert(postingUuid, any()) } throws IllegalStateException("duplicate key")
 		val publisher = mockk<JobPostingCreateResultPublisher>(relaxed = true)
 		val processor = JobPostingCreateKafkaProcessor(repo, publisher, json)
-		processor.handle(ConsumerRecord("async-job.job-posting-create", 0, 0L, "k", envelope))
+		processor.handle(ConsumerRecord("async-job.job-posting-create", 0, 0L, "k", payload))
 		verify(exactly = 1) { repo.insert(postingUuid, any()) }
 		verify(exactly = 1) { publisher.publishFailed(jobUuid, "k", "duplicate key") }
 		verify(exactly = 0) { publisher.publishSucceeded(any(), any(), any()) }
