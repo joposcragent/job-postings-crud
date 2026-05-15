@@ -4,6 +4,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
+import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.logging.LogTruncate
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.PostingRepository
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
@@ -27,6 +28,11 @@ class JobPostingCreateKafkaProcessor(
 			log.warn("job-posting-create-begin: missing or invalid body")
 			return
 		}
+		log.debug(
+			"job-posting-create-begin: parsed envelope key={} payload={}",
+			record.key(),
+			LogTruncate.forLog(jsonMapper.writeValueAsString(payload)),
+		)
 		when (val parsed = JobPostingCreateBeginPayloadMapper.parse(record.key(), payload)) {
 			is BeginPayloadParseResult.Invalid -> {
 				log.warn("job-posting-create-begin: {}", parsed.reason)
@@ -45,6 +51,12 @@ class JobPostingCreateKafkaProcessor(
 		try {
 			repository.insert(jobPostingUuid, item)
 			resultPublisher.publishSucceeded(jobUuid, messageKey, jobPostingUuid)
+			log.info(
+				"job-posting-create-begin: inserted and published succeeded jobUuid={} jobPostingUuid={} messageKey={}",
+				jobUuid,
+				jobPostingUuid,
+				messageKey,
+			)
 		} catch (e: Exception) {
 			log.error("job-posting-create-begin: insert failed jobUuid={}", jobUuid, e)
 			resultPublisher.publishFailed(

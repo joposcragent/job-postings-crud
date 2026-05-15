@@ -2,9 +2,11 @@ package ru.sadovskie.leo.app.joposcragent.jobpostingscrud.kafka
 
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.internals.RecordHeader
+import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Component
+import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.logging.LogTruncate
 import tools.jackson.databind.json.JsonMapper
 import java.nio.charset.StandardCharsets
 import java.time.OffsetDateTime
@@ -17,6 +19,8 @@ class JobPostingCreateResultPublisher(
 	private val kafkaTemplate: KafkaTemplate<String, String>,
 	private val jsonMapper: JsonMapper,
 ) {
+
+	private val log = LoggerFactory.getLogger(javaClass)
 
 	fun publishSucceeded(jobUuid: UUID, messageKey: String, jobPostingUuid: UUID) {
 		publish(
@@ -70,6 +74,24 @@ class JobPostingCreateResultPublisher(
 			json,
 			headers,
 		)
-		kafkaTemplate.send(record).get()
+		log.debug(
+			"kafka produce: topic={} key={} type={} payload={}",
+			record.topic(),
+			messageKey,
+			JobPostingOrchestrationMessageTypes.JOB_POSTING_CREATE_RESULT,
+			LogTruncate.forLog(json),
+		)
+		try {
+			kafkaTemplate.send(record).get()
+		} catch (e: Exception) {
+			log.error(
+				"kafka produce: send failed topic={} key={} type={}",
+				record.topic(),
+				messageKey,
+				JobPostingOrchestrationMessageTypes.JOB_POSTING_CREATE_RESULT,
+				e,
+			)
+			throw e
+		}
 	}
 }

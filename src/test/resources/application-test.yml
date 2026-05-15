@@ -1,3 +1,7 @@
+logging:
+  level:
+    ru.sadovskie.leo.app.joposcragent.jobpostingscrud: INFO
+
 spring:
   autoconfigure:
     exclude:

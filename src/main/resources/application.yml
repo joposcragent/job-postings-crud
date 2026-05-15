@@ -1,3 +1,7 @@
+logging:
+  level:
+    ru.sadovskie.leo.app.joposcragent.jobpostingscrud: INFO
+
 management:
   endpoint:
     enabled-by-default: true
@@ -34,6 +38,10 @@ spring:
   config:
     activate:
       on-profile: local
+
+logging:
+  level:
+    ru.sadovskie.leo.app.joposcragent.jobpostingscrud: DEBUG
 
 server:
   port: 8089

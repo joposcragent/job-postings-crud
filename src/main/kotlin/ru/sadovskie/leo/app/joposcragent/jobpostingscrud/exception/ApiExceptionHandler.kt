@@ -17,6 +17,7 @@ class ApiExceptionHandler {
 
 	@ExceptionHandler(ResponseStatusException::class)
 	fun handleResponseStatus(e: ResponseStatusException): ResponseEntity<String> {
+		log.debug("HTTP client error: status={} reason={}", e.statusCode, e.reason ?: e.message)
 		val body = e.reason ?: e.message ?: e.statusCode.toString()
 		return ResponseEntity.status(e.statusCode)
 			.contentType(MediaType.TEXT_PLAIN)
