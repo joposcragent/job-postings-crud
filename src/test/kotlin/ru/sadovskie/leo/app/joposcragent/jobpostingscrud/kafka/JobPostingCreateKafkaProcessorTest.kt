@@ -53,6 +53,46 @@ class JobPostingCreateKafkaProcessorTest {
 	}
 
 	@Test
+	fun `handle parse failure publishes failed when jobUuid known`() {
+		val jobUuid = UUID.fromString("77777777-7777-4777-8777-777777777777")
+		val postingUuid = UUID.fromString("88888888-8888-4888-8888-888888888888")
+		val sq = UUID.fromString("99999999-9999-4999-8999-999999999999")
+		val payload = """
+			{
+				"jobUuid": "$jobUuid",
+				"entityUuid": "$postingUuid",
+				"jobPostingUuid": "$postingUuid",
+				"searchQueryUuid": "$sq",
+				"title": "T",
+				"url": "https://x",
+				"company": "C",
+				"content": "body",
+				"publicationDate": "2026-06-02"
+			}
+		""".trimIndent()
+		val repo = mockk<PostingRepository>(relaxed = true)
+		val publisher = mockk<JobPostingCreateResultPublisher>(relaxed = true)
+		val processor = JobPostingCreateKafkaProcessor(repo, publisher, json)
+		processor.handle(ConsumerRecord("async-job.job-posting-create", 0, 0L, jobUuid.toString(), payload))
+		verify(exactly = 0) { repo.insert(any(), any()) }
+		verify(exactly = 1) {
+			publisher.publishFailed(jobUuid, jobUuid.toString(), match { it.contains("uid") })
+		}
+		verify(exactly = 0) { publisher.publishSucceeded(any(), any(), any()) }
+	}
+
+	@Test
+	fun `handle parse failure does not publish when jobUuid unknown`() {
+		val payload = """{"jobUuid":"not-uuid"}"""
+		val repo = mockk<PostingRepository>(relaxed = true)
+		val publisher = mockk<JobPostingCreateResultPublisher>(relaxed = true)
+		val processor = JobPostingCreateKafkaProcessor(repo, publisher, json)
+		processor.handle(ConsumerRecord("async-job.job-posting-create", 0, 0L, null, payload))
+		verify(exactly = 0) { repo.insert(any(), any()) }
+		verify(exactly = 0) { publisher.publishFailed(any(), any(), any()) }
+	}
+
+	@Test
 	fun `handle insert failure publishes failed`() {
 		val jobUuid = UUID.fromString("44444444-4444-4444-8444-444444444444")
 		val postingUuid = UUID.fromString("55555555-5555-5555-8555-555555555555")

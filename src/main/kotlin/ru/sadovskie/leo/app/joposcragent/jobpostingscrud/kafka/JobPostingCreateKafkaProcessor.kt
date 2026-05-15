@@ -8,7 +8,6 @@ import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.logging.LogTruncate
 import ru.sadovskie.leo.app.joposcragent.jobpostingscrud.repository.PostingRepository
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
-import java.util.UUID
 
 @Service
 @ConditionalOnProperty(prefix = "app.kafka", name = ["enabled"], havingValue = "true", matchIfMissing = true)
@@ -32,16 +31,22 @@ class JobPostingCreateKafkaProcessor(
 			val payloadPreview = LogTruncate.forLog(jsonMapper.writeValueAsString(payload))
 			log.debug("job-posting-create-begin: parsed envelope key={} payload={}", record.key(), payloadPreview)
 		}
-		when (val parsed = JobPostingCreateBeginPayloadMapper.parse(record.key(), payload)) {
-			is BeginPayloadParseResult.Invalid -> {
-				log.warn("job-posting-create-begin: {}", parsed.reason)
-				return
+		try {
+			val parsed = JobPostingCreateBeginPayloadMapper.parse(record.key(), payload)
+			parsed.softWarning?.let { warn ->
+				log.warn("job-posting-create-begin: {}", warn)
 			}
-			is BeginPayloadParseResult.Ok -> persistAndPublish(parsed)
+			persistAndPublish(parsed)
+		} catch (e: JobPostingCreateBeginPayloadException) {
+			log.error("job-posting-create-begin: {}", e.reason, e)
+			val jobUuid = e.jobUuid
+			if (jobUuid != null) {
+				resultPublisher.publishFailed(jobUuid, e.messageKey, e.reason)
+			}
 		}
 	}
 
-	private fun persistAndPublish(parsed: BeginPayloadParseResult.Ok) {
+	private fun persistAndPublish(parsed: BeginPayloadParseResult) {
 		val jobPostingUuid = parsed.jobPostingUuid
 		val item = parsed.item
 		val jobUuid = parsed.jobUuid

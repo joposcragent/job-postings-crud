@@ -7,48 +7,51 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeParseException
 import java.util.UUID
 
-sealed class BeginPayloadParseResult {
-	data class Ok(
-		val jobUuid: UUID,
-		val messageKey: String,
-		val jobPostingUuid: UUID,
-		val item: JobPostingsItem,
-	) : BeginPayloadParseResult()
-
-	data class Invalid(val reason: String) : BeginPayloadParseResult()
-}
+data class BeginPayloadParseResult(
+	val jobUuid: UUID,
+	val messageKey: String,
+	val jobPostingUuid: UUID,
+	val item: JobPostingsItem,
+	val softWarning: String?,
+)
 
 object JobPostingCreateBeginPayloadMapper {
 
 	fun parse(recordKey: String?, payload: JsonNode): BeginPayloadParseResult {
-		val jobUuidText = textOrNull(payload, "jobUuid")
-			?: return BeginPayloadParseResult.Invalid("Отсутствует или пустой jobUuid")
-		val jobUuid = parseUuid(jobUuidText)
-			?: return BeginPayloadParseResult.Invalid("Некорректный jobUuid")
+		val jobUuidFromPayload = textOrNull(payload, "jobUuid")?.let { parseUuid(it) }
+		val jobUuidFromKey = recordKey?.trim()?.takeIf { it.isNotEmpty() }?.let { parseUuid(it) }
+		val jobUuid = jobUuidFromPayload ?: jobUuidFromKey
+			?: throw JobPostingCreateBeginPayloadException(
+				"Отсутствует или некорректный jobUuid (и ключ записи не UUID)",
+				null,
+				recordKey?.takeIf { it.isNotBlank() } ?: "",
+			)
 		val messageKey = (recordKey?.takeIf { it.isNotBlank() }) ?: jobUuid.toString()
 
+		fun fail(reason: String): Nothing =
+			throw JobPostingCreateBeginPayloadException(reason, jobUuid, messageKey)
+
 		val entityUuid = textOrNull(payload, "entityUuid")?.let { parseUuid(it) }
-		val jobPostingUuidText = textOrNull(payload, "jobPostingUuid")
-		val jobPostingUuidFromField = jobPostingUuidText?.let { parseUuid(it) }
+		val jobPostingUuidFromField = textOrNull(payload, "jobPostingUuid")?.let { parseUuid(it) }
 		val jobPostingUuid = jobPostingUuidFromField ?: entityUuid
-			?: return BeginPayloadParseResult.Invalid("Нужен jobPostingUuid или entityUuid")
+			?: fail("Нужен jobPostingUuid или entityUuid")
 
 		val searchQueryUuidText = textOrNull(payload, "searchQueryUuid")
-			?: return BeginPayloadParseResult.Invalid("Отсутствует searchQueryUuid")
+			?: fail("Отсутствует searchQueryUuid")
 		val searchQueryUuid = parseUuid(searchQueryUuidText)
-			?: return BeginPayloadParseResult.Invalid("Некорректный searchQueryUuid")
+			?: fail("Некорректный searchQueryUuid")
 
-		val uid = textOrNull(payload, "uid") ?: return BeginPayloadParseResult.Invalid("Отсутствует uid")
-		val title = textOrNull(payload, "title") ?: return BeginPayloadParseResult.Invalid("Отсутствует title")
-		val url = textOrNull(payload, "url") ?: return BeginPayloadParseResult.Invalid("Отсутствует url")
+		val uid = textOrNull(payload, "uid") ?: fail("Отсутствует uid")
+		val title = textOrNull(payload, "title") ?: fail("Отсутствует title")
+		val url = textOrNull(payload, "url") ?: fail("Отсутствует url")
 		val company = textOrNull(payload, "company")
-			?: return BeginPayloadParseResult.Invalid("Отсутствует company")
 		val content = textOrNull(payload, "content")
-			?: return BeginPayloadParseResult.Invalid("Отсутствует content")
 		val publicationRaw = textOrNull(payload, "publicationDate")
-			?: return BeginPayloadParseResult.Invalid("Отсутствует publicationDate")
+			?: fail("Отсутствует publicationDate")
 		val publicationDate = normalizePublicationDate(publicationRaw)
-			?: return BeginPayloadParseResult.Invalid("Некорректная publicationDate: $publicationRaw")
+			?: fail("Некорректная publicationDate: $publicationRaw")
+
+		val softWarning = buildSoftWarning(company, content)
 
 		val item = JobPostingsItem(
 			uuid = jobPostingUuid,
@@ -60,7 +63,15 @@ object JobPostingCreateBeginPayloadMapper {
 			company = company,
 			content = content,
 		)
-		return BeginPayloadParseResult.Ok(jobUuid, messageKey, jobPostingUuid, item)
+		return BeginPayloadParseResult(jobUuid, messageKey, jobPostingUuid, item, softWarning)
+	}
+
+	private fun buildSoftWarning(company: String?, content: String?): String? {
+		val parts = mutableListOf<String>()
+		if (company == null) parts.add("company")
+		if (content == null) parts.add("content")
+		if (parts.isEmpty()) return null
+		return "Отсутствуют необязательные поля: ${parts.joinToString(", ")}"
 	}
 
 	private fun textOrNull(node: JsonNode, field: String): String? {
